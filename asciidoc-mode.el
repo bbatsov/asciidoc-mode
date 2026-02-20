@@ -166,9 +166,8 @@ Each entry has the form (LANG URL REVISION SOURCE-DIR CC C++).")
 
    :language 'asciidoc
    :feature 'macro
-   '((block_macro
-      (block_macro_name) @font-lock-function-call-face
-      (target) @font-lock-string-face))
+   '((block_macro (block_macro_name) @font-lock-function-call-face)
+     (block_macro (target) @font-lock-string-face))
 
    :language 'asciidoc
    :feature 'metadata
