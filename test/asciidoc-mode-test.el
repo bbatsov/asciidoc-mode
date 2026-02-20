@@ -33,7 +33,13 @@
 
   (it "sets comment-start"
     (with-asciidoc-buffer ""
-      (expect comment-start :to-equal "// "))))
+      (expect comment-start :to-equal "// ")))
+
+  (it "enables outline-minor-mode"
+    (assume asciidoc-test-grammars-available
+            "tree-sitter grammars not installed")
+    (with-asciidoc-buffer ""
+      (expect outline-minor-mode :to-be-truthy))))
 
 ;;; Font-lock: headings
 

@@ -288,7 +288,10 @@ Install them with \\[asciidoc-install-grammars].
     ;; Outline
     (setq-local treesit-outline-predicate asciidoc--outline-predicate)
 
-    (treesit-major-mode-setup)))
+    (treesit-major-mode-setup)
+
+    ;; Enable outline-minor-mode for heading navigation and folding.
+    (outline-minor-mode 1)))
 
 ;;; Auto-mode-alist
 
