@@ -134,11 +134,34 @@
   (it "fontifies listing block body"
     (assume asciidoc-test-grammars-available skip-reason)
     (with-fontified-asciidoc-buffer "----\nsome code\n----\n"
-      ;; "some code" starts at line 2
       (goto-char (point-min))
       (forward-line 1)
       (expect (asciidoc-test-face-at (point))
-              :to-equal 'font-lock-string-face))))
+              :to-equal 'font-lock-string-face)))
+
+  (it "fontifies indented literal blocks"
+    (assume asciidoc-test-grammars-available skip-reason)
+    (with-fontified-asciidoc-buffer "= T\n\n  indented literal\n"
+      (goto-char (point-min))
+      (forward-line 2)
+      (expect (asciidoc-test-face-at (point))
+              :to-equal 'font-lock-string-face)))
+
+  (it "fontifies markdown-style quote blocks"
+    (assume asciidoc-test-grammars-available skip-reason)
+    (with-fontified-asciidoc-buffer "= T\n\n> A quoted line\n"
+      (goto-char (point-min))
+      (forward-line 2)
+      (expect (asciidoc-test-face-at (point))
+              :to-equal 'font-lock-doc-face)))
+
+  (it "fontifies thematic breaks"
+    (assume asciidoc-test-grammars-available skip-reason)
+    (with-fontified-asciidoc-buffer "= T\n\n'''\n"
+      (goto-char (point-min))
+      (forward-line 2)
+      (expect (asciidoc-test-face-at (point))
+              :to-equal 'font-lock-comment-delimiter-face))))
 
 ;;; Font-lock: attributes
 
