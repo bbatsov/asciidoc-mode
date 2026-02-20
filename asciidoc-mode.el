@@ -277,6 +277,13 @@ Install them with \\[asciidoc-install-grammars].
     (setq-local treesit-defun-type-regexp
                 "\\`\\(?:document_title\\|title[1-5]\\)\\'")
     (setq-local treesit-defun-name-function #'asciidoc--imenu-name)
+    (setq-local treesit-thing-settings
+                `((asciidoc
+                   (sentence
+                    ,(regexp-opt '("paragraph" "listing_block"
+                                   "literal_block" "admonition" "list"
+                                   "quoted_md_block" "breaks"
+                                   "block_comment" "line_comment"))))))
 
     ;; Outline
     (setq-local treesit-outline-predicate asciidoc--outline-predicate)

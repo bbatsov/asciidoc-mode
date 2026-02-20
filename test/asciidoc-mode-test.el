@@ -231,7 +231,16 @@
     (with-asciidoc-buffer "== First\n\nSome text.\n\n== Second\n"
       (goto-char (point-max))
       (beginning-of-defun)
-      (expect (looking-at "== Second") :to-be-truthy))))
+      (expect (looking-at "== Second") :to-be-truthy)))
+
+  (it "moves forward by sentence across paragraphs"
+    (assume asciidoc-test-grammars-available skip-reason)
+    (with-asciidoc-buffer "== S\n\nFirst paragraph.\n\nSecond paragraph.\n"
+      (goto-char (point-min))
+      (search-forward "First")
+      (goto-char (match-beginning 0))
+      (forward-sentence)
+      (expect (looking-at "\nSecond") :to-be-truthy))))
 
 (provide 'asciidoc-mode-test)
 ;;; asciidoc-mode-test.el ends here
