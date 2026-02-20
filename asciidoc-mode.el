@@ -234,11 +234,6 @@ Each entry has the form (LANG URL REVISION SOURCE-DIR CC C++).")
   `(("Section" "\\`title[1-5]\\'" nil asciidoc--imenu-name))
   "Imenu settings for `asciidoc-mode'.")
 
-;;; Comment variables
-
-(defvar asciidoc-comment-start "// "
-  "Comment start string for AsciiDoc.")
-
 ;;; Outline
 
 (defvar asciidoc--outline-predicate
@@ -256,7 +251,7 @@ Requires two tree-sitter grammars from
 Install them with \\[asciidoc-install-grammars].
 
 \\{asciidoc-mode-map}"
-  (setq-local comment-start asciidoc-comment-start)
+  (setq-local comment-start "// ")
   (setq-local comment-start-skip "//+\\s-*")
 
   (when (asciidoc--ensure-grammars)
