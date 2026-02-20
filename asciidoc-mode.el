@@ -200,6 +200,13 @@ Each entry has the form (LANG URL REVISION SOURCE-DIR CC C++).")
      (footnote) @font-lock-doc-face)
 
    :language 'asciidoc-inline
+   :feature 'inline-reference
+   '((id_assignment) @font-lock-preprocessor-face
+     (index_term) @font-lock-doc-face
+     (index_term2) @font-lock-doc-face
+     (intrinsic_attributes_pair) @font-lock-escape-face)
+
+   :language 'asciidoc-inline
    :feature 'replacement
    '((replacement) @font-lock-escape-face
      (escaped_sequence) @font-lock-escape-face))
@@ -210,7 +217,7 @@ Each entry has the form (LANG URL REVISION SOURCE-DIR CC C++).")
 (defvar asciidoc--treesit-font-lock-feature-list
   '((comment title)
     (block list admonition attribute macro metadata)
-    (inline-markup inline-link inline-macro)
+    (inline-markup inline-link inline-macro inline-reference)
     (replacement))
   "Font-lock feature list for `asciidoc-mode'.")
 
