@@ -1,0 +1,12 @@
+(eldev-require-version "1.2")
+
+(eldev-use-plugin 'autoloads)
+
+;; Buttercup test runner
+(eldev-add-extra-dependencies 'test 'buttercup)
+(setf eldev-test-runner 'buttercup)
+
+;; Linting
+(setf eldev-lint-default '(elisp))
+(with-eval-after-load 'elisp-lint
+  (setf elisp-lint-ignored-validators '("package-lint")))
