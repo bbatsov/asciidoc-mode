@@ -1,10 +1,15 @@
 (eldev-require-version "1.2")
 
+(eldev-use-package-archive 'melpa)
 (eldev-use-plugin 'autoloads)
 
-;; Buttercup test runner
+;; Buttercup test framework
 (eldev-add-extra-dependencies 'test 'buttercup)
-(setf eldev-test-runner 'buttercup)
+(eldev-add-loading-roots 'test "test")
+
+;; Make tree-sitter grammars from ~/.emacs.d/tree-sitter/ available
+(setf treesit-extra-load-path
+      (list (expand-file-name "tree-sitter" "~/.emacs.d/")))
 
 ;; Linting
 (setf eldev-lint-default '(elisp))

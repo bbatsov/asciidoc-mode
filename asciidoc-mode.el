@@ -66,14 +66,12 @@
 (defvar asciidoc-grammar-recipes
   '((asciidoc
      "https://github.com/cathaysia/tree-sitter-asciidoc"
-     nil nil nil nil
-     "tree-sitter-asciidoc/src")
+     nil "tree-sitter-asciidoc/src")
     (asciidoc-inline
      "https://github.com/cathaysia/tree-sitter-asciidoc"
-     nil nil nil nil
-     "tree-sitter-asciidoc_inline/src"))
+     nil "tree-sitter-asciidoc_inline/src"))
   "Tree-sitter grammar recipes for AsciiDoc.
-Each entry has the form (LANG URL REV CC C++ MAKE-FLAGS SRC-DIR).")
+Each entry has the form (LANG URL REVISION SOURCE-DIR CC C++).")
 
 ;;;###autoload
 (defun asciidoc-install-grammars ()
@@ -92,13 +90,6 @@ Each entry has the form (LANG URL REV CC C++ MAKE-FLAGS SRC-DIR).")
   (and (treesit-available-p)
        (treesit-language-available-p 'asciidoc)
        (treesit-language-available-p 'asciidoc-inline)))
-
-;;; Load name override
-;; The inline grammar library is named libtree-sitter-asciidoc_inline
-;; but Emacs would look for libtree-sitter-asciidoc-inline by default.
-(add-to-list 'treesit-load-name-override-list
-             '(asciidoc-inline "libtree-sitter-asciidoc_inline"
-                               "tree_sitter_asciidoc_inline"))
 
 ;;; Faces
 
@@ -166,17 +157,11 @@ Each entry has the form (LANG URL REV CC C++ MAKE-FLAGS SRC-DIR).")
 
    :language 'asciidoc
    :feature 'admonition
-   '((admonition_note) @font-lock-keyword-face
-     (admonition_tip) @font-lock-keyword-face
-     (admonition_warning) @font-lock-warning-face
-     (admonition_caution) @font-lock-warning-face
-     (admonition_important) @font-lock-keyword-face)
+   '((admonition) @font-lock-keyword-face)
 
    :language 'asciidoc
    :feature 'attribute
-   '((document_attr
-      (attribute_name) @font-lock-variable-name-face
-      (attribute_value) @font-lock-string-face)
+   '((document_attr (attr_name) @font-lock-variable-name-face)
      (element_attr) @font-lock-preprocessor-face)
 
    :language 'asciidoc
@@ -266,8 +251,10 @@ Install them with \\[asciidoc-install-grammars].
 
   (when (asciidoc--ensure-grammars)
     ;; Create both parsers over the full buffer.
-    (treesit-parser-create 'asciidoc)
+    ;; Create inline parser first so the block parser ends up first
+    ;; in `treesit-parser-list' (used by `treesit-buffer-root-node').
     (treesit-parser-create 'asciidoc-inline)
+    (treesit-parser-create 'asciidoc)
 
     (setq-local treesit-primary-parser
                 (car (treesit-parser-list nil 'asciidoc)))

@@ -6,6 +6,7 @@
 
 ;;; Code:
 
+(require 'buttercup)
 (require 'asciidoc-mode)
 
 (defmacro with-asciidoc-buffer (content &rest body)
