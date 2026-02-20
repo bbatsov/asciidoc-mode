@@ -35,7 +35,19 @@ This downloads and compiles both grammars automatically. You only need to do thi
 
 === Package Installation
 
-==== From source
+The package is not yet available on MELPA or NonGNU ELPA. For now, install directly from GitHub.
+
+==== use-package with vc
+
+Emacs 30+ has built-in support for installing packages from VCS:
+
+[source,emacs-lisp]
+----
+(use-package asciidoc-mode
+  :vc (:url "https://github.com/bbatsov/asciidoc-mode" :branch "main"))
+----
+
+==== Manual
 
 Clone the repository and add it to your `load-path`:
 
@@ -43,14 +55,6 @@ Clone the repository and add it to your `load-path`:
 ----
 (add-to-list 'load-path "/path/to/asciidoc-mode")
 (require 'asciidoc-mode)
-----
-
-==== use-package
-
-[source,emacs-lisp]
-----
-(use-package asciidoc-mode
-  :mode ("\\.adoc\\'" "\\.asciidoc\\'"))
 ----
 
 == Usage
