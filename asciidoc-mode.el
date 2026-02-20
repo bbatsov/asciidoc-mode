@@ -146,14 +146,18 @@ Each entry has the form (LANG URL REVISION SOURCE-DIR CC C++).")
    :feature 'block
    '((listing_block_body) @font-lock-string-face
      (literal_block_body) @font-lock-string-face
-     (block_title) @font-lock-type-face)
+     (ident_block_line) @font-lock-string-face
+     (block_title) @font-lock-type-face
+     (breaks) @font-lock-comment-delimiter-face
+     (quoted_md_block) @font-lock-doc-face)
 
    :language 'asciidoc
    :feature 'list
    '((ordered_list_marker) @font-lock-constant-face
      (unordered_list_marker) @font-lock-constant-face
      (checked_list_marker) @font-lock-constant-face
-     (callout_list_marker) @font-lock-constant-face)
+     (callout_list_marker) @font-lock-constant-face
+     (callout_marker) @font-lock-constant-face)
 
    :language 'asciidoc
    :feature 'admonition
