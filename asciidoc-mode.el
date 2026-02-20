@@ -273,6 +273,11 @@ Install them with \\[asciidoc-install-grammars].
     (setq-local treesit-simple-imenu-settings
                 asciidoc--treesit-simple-imenu-settings)
 
+    ;; Navigation
+    (setq-local treesit-defun-type-regexp
+                "\\`\\(?:document_title\\|title[1-5]\\)\\'")
+    (setq-local treesit-defun-name-function #'asciidoc--imenu-name)
+
     ;; Outline
     (setq-local treesit-outline-predicate asciidoc--outline-predicate)
 

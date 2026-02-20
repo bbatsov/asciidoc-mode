@@ -211,5 +211,27 @@
         ;; Should have a "Section" group
         (expect (assoc "Section" index) :not :to-be nil)))))
 
+;;; Navigation
+
+(describe "Navigation"
+  :var (skip-reason)
+  (before-all
+    (unless asciidoc-test-grammars-available
+      (setq skip-reason "tree-sitter grammars not installed")))
+
+  (it "moves to next section with beginning-of-defun"
+    (assume asciidoc-test-grammars-available skip-reason)
+    (with-asciidoc-buffer "== First\n\nSome text.\n\n== Second\n"
+      (goto-char (point-min))
+      (beginning-of-defun -1)
+      (expect (looking-at "== Second") :to-be-truthy)))
+
+  (it "moves to previous section with beginning-of-defun"
+    (assume asciidoc-test-grammars-available skip-reason)
+    (with-asciidoc-buffer "== First\n\nSome text.\n\n== Second\n"
+      (goto-char (point-max))
+      (beginning-of-defun)
+      (expect (looking-at "== Second") :to-be-truthy))))
+
 (provide 'asciidoc-mode-test)
 ;;; asciidoc-mode-test.el ends here
