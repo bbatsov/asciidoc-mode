@@ -132,6 +132,17 @@ Clone the repository and add it to your `load-path`:
 
 Open any `.adoc` or `.asciidoc` file and `asciidoc-mode` activates automatically.
 
+== Design
+
+`asciidoc-mode` uses two tree-sitter parsers from {url-grammar}[cathaysia/tree-sitter-asciidoc], each covering the full buffer independently:
+
+- `asciidoc` -- block-level structure (headings, paragraphs, lists, code blocks, admonitions, attributes, comments, etc.)
+- `asciidoc-inline` -- inline formatting (bold, italic, monospace, links, cross-references, footnotes, macros, replacements, etc.)
+
+The grammar author split them because block-level and inline-level parsing have fundamentally different rules in AsciiDoc, and separating them keeps each grammar simpler. Both parsers operate on the entire buffer without range restrictions -- this is the same dual-parser pattern used by Emacs's built-in `markdown-ts-mode`.
+
+When grammars are unavailable, the mode falls back to plain `text-mode` with comment support only. No tree-sitter features are activated in this case.
+
 == Development
 
 The project uses https://emacs-eldev.github.io/eldev/[Eldev] for build tooling and https://github.com/jorgenschaefer/emacs-buttercup[Buttercup] for testing.
