@@ -206,7 +206,8 @@ Each entry has the form (LANG URL REVISION SOURCE-DIR CC C++).")
 
    :language 'asciidoc-inline
    :feature 'inline-macro
-   '((inline_macro) @font-lock-function-call-face
+   '((inline_macro (macro_name) @font-lock-function-call-face)
+     (inline_macro (target) @font-lock-string-face)
      (stem_macro) @font-lock-function-call-face
      (footnote) @font-lock-doc-face)
 

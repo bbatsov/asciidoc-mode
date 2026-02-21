@@ -146,6 +146,8 @@ The grammar author split them because block-level and inline-level parsing have 
 
 Because both parsers run independently on the same text, they can disagree. In particular, the inline parser misinterprets `*` and `**` list markers as emphasis delimiters, creating spurious emphasis spans that can swallow subsequent inline content (e.g. autolinks). To mitigate this, all block-level font-lock rules use `:override t` so that block-level faces (list markers, headings, code blocks, etc.) always win over incorrect inline faces. This doesn't fix inline elements consumed by the spurious emphasis nodes -- that requires an upstream grammar fix (see {url-repo}/issues/2[#2]).
 
+A related subtlety: treesit's default font-lock behavior (`:override nil`) skips an entire captured range if _any_ position within it already has a face. This means font-lock rules that capture a broad parent node will silently fail when a child node was already fontified by an earlier rule. To avoid this, inline macro rules capture specific child nodes (`macro_name`, `target`) rather than the whole `inline_macro` node -- the same pattern used for block macros.
+
 When grammars are unavailable, the mode falls back to plain `text-mode` with comment support only. No tree-sitter features are activated in this case.
 
 == Development
