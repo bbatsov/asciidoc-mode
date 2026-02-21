@@ -1,0 +1,69 @@
+= Sample Document
+:author: Jane Doe
+:revnumber: 1.0
+
+This is the first paragraph of the document.
+
+== Getting Started
+
+A paragraph with *bold*, _italic_, and `monospace` text.
+
+=== Installation
+
+Follow these steps:
+
+. Download the package
+. Install dependencies
+. Run the setup script
+
+=== Configuration
+
+* Enable feature A
+* Enable feature B
+** Nested item
+
+==== Advanced Options
+
+[checklist]
+- [x] Option one
+- [ ] Option two
+
+== Code Examples
+
+A listing block:
+
+----
+def hello():
+    print("Hello, world!")
+----
+
+An indented literal block:
+
+  $ make install
+
+== Admonitions and Blocks
+
+NOTE: Remember to save your work.
+
+TIP: Use keyboard shortcuts for efficiency.
+
+> This is a markdown-style quote block.
+
+'''
+
+A paragraph after the thematic break.
+
+== Macros and Links
+
+toc::[]
+
+https://example.com is an autolink.
+
+== Final Notes
+
+// This is a line comment.
+
+.A block title
+This paragraph has a block title above it.
+
+That is all for this sample document.
