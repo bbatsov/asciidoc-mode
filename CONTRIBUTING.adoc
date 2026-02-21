@@ -1,0 +1,36 @@
+= Contributing
+
+If you discover issues, have ideas for improvements or new features,
+please report them to the https://github.com/bbatsov/asciidoc-mode/issues[issue tracker] or
+submit a pull request. Please try to follow these guidelines when you do so.
+
+== Issue Reporting
+
+* Check that the issue has not already been reported.
+* Check that the issue has not already been fixed in the latest code on `main`.
+* Be clear, concise and precise in your description of the problem.
+* Open an issue with a descriptive title and a summary in grammatically correct,
+  complete sentences.
+* Mention your Emacs version and operating system.
+* Mention `asciidoc-mode`'s version (`M-x describe-variable asciidoc-mode-version`).
+* Include any relevant code or AsciiDoc snippets.
+
+== Pull Requests
+
+* Read https://gun.io/blog/how-to-github-fork-branch-and-pull-request[how to properly contribute to open source projects on GitHub].
+* Use a topic branch to easily amend a pull request later, if necessary.
+* Write https://tbaggery.com/2008/04/19/a-note-about-git-commit-messages.html[good commit messages].
+* Mention related tickets in the commit messages (e.g. `[Fix #N] Fontify foobar properly`).
+* Use the same coding conventions as the rest of the project.
+* Verify your Emacs Lisp code with `checkdoc` (kbd:[C-c ? d]).
+* https://gitready.com/advanced/2009/02/10/squashing-commits-with-rebase.html[Squash related commits together].
+* Open a https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-pull-requests[pull request] that relates to _only_ one subject with a clear title
+and description in grammatically correct, complete sentences.
+* Include Buttercup tests for any new or changed functionality.
+
+== Development Setup
+
+. Fork and clone the repository.
+. Install https://github.com/emacs-eldev/eldev[Eldev].
+. Install the tree-sitter grammars with `M-x asciidoc-install-grammars`.
+. Run `make all` to compile, lint and run the tests.
