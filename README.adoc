@@ -118,7 +118,7 @@ Emacs 30+ has built-in support for installing packages from VCS:
 [source,emacs-lisp]
 ----
 (use-package asciidoc-mode
-  :vc (:url "https://github.com/bbatsov/asciidoc-mode" :branch "main"))
+  :vc (:url "https://github.com/bbatsov/asciidoc-mode" :rev :newest :branch "main"))
 ----
 
 ==== Manual
