@@ -128,12 +128,17 @@ Each entry has the form (LANG URL REVISION SOURCE-DIR CC C++).")
 (defvar asciidoc--font-lock-settings
   (treesit-font-lock-rules
    ;; Block-level rules (asciidoc parser)
+   ;; Use :override t so block-level faces win over spurious inline
+   ;; emphasis nodes (the inline parser misreads `*' list markers as
+   ;; emphasis delimiters).
    :language 'asciidoc
+   :override t
    :feature 'comment
    '((line_comment) @font-lock-comment-face
      (block_comment) @font-lock-comment-face)
 
    :language 'asciidoc
+   :override t
    :feature 'title
    '((document_title) @asciidoc-document-title-face
      (title1) @asciidoc-title-1-face
@@ -143,6 +148,7 @@ Each entry has the form (LANG URL REVISION SOURCE-DIR CC C++).")
      (title5) @asciidoc-title-5-face)
 
    :language 'asciidoc
+   :override t
    :feature 'block
    '((listing_block_body) @font-lock-string-face
      (literal_block_body) @font-lock-string-face
@@ -152,6 +158,7 @@ Each entry has the form (LANG URL REVISION SOURCE-DIR CC C++).")
      (quoted_md_block) @font-lock-doc-face)
 
    :language 'asciidoc
+   :override t
    :feature 'list
    '((ordered_list_marker) @font-lock-constant-face
      (unordered_list_marker) @font-lock-constant-face
@@ -160,20 +167,24 @@ Each entry has the form (LANG URL REVISION SOURCE-DIR CC C++).")
      (callout_marker) @font-lock-constant-face)
 
    :language 'asciidoc
+   :override t
    :feature 'admonition
    '((admonition) @font-lock-keyword-face)
 
    :language 'asciidoc
+   :override t
    :feature 'attribute
    '((document_attr (attr_name) @font-lock-variable-name-face)
      (element_attr) @font-lock-preprocessor-face)
 
    :language 'asciidoc
+   :override t
    :feature 'macro
    '((block_macro (block_macro_name) @font-lock-function-call-face)
      (block_macro (target) @font-lock-string-face))
 
    :language 'asciidoc
+   :override t
    :feature 'metadata
    '((author_line) @font-lock-doc-face
      (revision_line) @font-lock-doc-face)
