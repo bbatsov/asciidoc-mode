@@ -305,6 +305,47 @@ Install them with \\[asciidoc-install-grammars].
     ;; Enable outline-minor-mode for heading navigation and folding.
     (outline-minor-mode 1)))
 
+;;; Menu
+
+(easy-menu-define asciidoc-mode-menu asciidoc-mode-map
+  "Menu for `asciidoc-mode'."
+  '("AsciiDoc"
+    ("Navigation"
+     ["Jump to Section..." imenu]
+     "---"
+     ["Next Section" outline-next-visible-heading]
+     ["Previous Section" outline-previous-visible-heading]
+     ["Up to Parent Section" outline-up-heading]
+     ["Next Section (Same Level)" outline-forward-same-level]
+     ["Previous Section (Same Level)" outline-backward-same-level]
+     "---"
+     ["Forward Sentence" forward-sentence]
+     ["Backward Sentence" backward-sentence])
+    ("Show & Hide"
+     ["Cycle Heading" outline-cycle]
+     ["Cycle Buffer" outline-cycle-buffer]
+     "---"
+     ["Show All" outline-show-all]
+     ["Hide Body" outline-hide-body]
+     ["Hide Other" outline-hide-other])
+    ("Headings"
+     ["Promote Subtree" outline-promote]
+     ["Demote Subtree" outline-demote]
+     ["Move Subtree Up" outline-move-subtree-up]
+     ["Move Subtree Down" outline-move-subtree-down]
+     "---"
+     ["Mark Subtree" outline-mark-subtree])
+    "---"
+    ["Comment/Uncomment Region" comment-dwim]
+    ["Narrow to Section" narrow-to-defun]
+    ["Widen" widen :enable (buffer-narrowed-p)]
+    "---"
+    ["Install Grammars" asciidoc-install-grammars]
+    ["Inspect Mode" treesit-inspect-mode]
+    "---"
+    ["Show Version" (message "asciidoc-mode %s" asciidoc-mode-version)]
+    ["Describe Mode" (describe-function 'asciidoc-mode)]))
+
 ;;; Auto-mode-alist
 
 ;;;###autoload
