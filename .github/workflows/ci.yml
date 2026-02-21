@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    paths-ignore: ['**.md']
+  pull_request:
+    paths-ignore: ['**.md']
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    continue-on-error: ${{matrix.emacs_version == 'snapshot'}}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        emacs_version: ['30.1', 'snapshot']
+
+    steps:
+    - name: Set up Emacs
+      uses: purcell/setup-emacs@master
+      with:
+        version: ${{matrix.emacs_version}}
+
+    - name: Install Eldev
+      run: curl -fsSL https://raw.github.com/doublep/eldev/master/webinstall/github-eldev | sh
+
+    - name: Check out the source code
+      uses: actions/checkout@v4
+
+    - name: Install tree-sitter grammars
+      run: |
+        eldev exec "(progn
+          (let ((treesit-language-source-alist asciidoc-grammar-recipes))
+            (dolist (recipe asciidoc-grammar-recipes)
+              (treesit-install-language-grammar (car recipe)))))"
+
+    - name: Compile
+      run: eldev compile --warnings-as-errors
+
+    - name: Lint
+      run: eldev lint
+
+    - name: Test
+      run: eldev -dtT test
