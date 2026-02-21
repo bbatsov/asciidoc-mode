@@ -127,7 +127,14 @@
     (with-fontified-asciidoc-buffer "some `mono` text\n"
       (let ((pos (string-match "`mono" "some `mono` text")))
         (expect (asciidoc-test-face-at (+ (point-min) pos))
-                :to-equal 'font-lock-string-face)))))
+                :to-equal 'font-lock-string-face))))
+
+  (it "fontifies autolinks"
+    (assume asciidoc-test-grammars-available skip-reason)
+    (with-fontified-asciidoc-buffer "Visit https://example.com for details.\n"
+      (let ((pos (string-match "https" "Visit https://example.com for details.")))
+        (expect (asciidoc-test-face-at (+ (point-min) pos))
+                :to-equal 'font-lock-constant-face)))))
 
 ;;; Font-lock: blocks
 

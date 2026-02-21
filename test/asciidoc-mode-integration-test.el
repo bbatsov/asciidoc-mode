@@ -153,6 +153,41 @@ OCCURRENCE selects which match (default 1)."
       (expect (asciidoc-test-face-at-match "toc::")
               :to-equal 'font-lock-function-call-face))))
 
+;;; Block-level override
+
+(describe "Integration: block overrides inline"
+  :var (skip-reason)
+  (before-all
+    (unless asciidoc-test-grammars-available
+      (setq skip-reason "tree-sitter grammars not installed")))
+
+  (it "unordered list markers override spurious emphasis"
+    (assume asciidoc-test-grammars-available skip-reason)
+    (with-sample-buffer
+      (expect (asciidoc-test-face-at-match "* Enable feature A")
+              :to-equal 'font-lock-constant-face)))
+
+  (it "nested list markers override spurious emphasis"
+    (assume asciidoc-test-grammars-available skip-reason)
+    (with-sample-buffer
+      (expect (asciidoc-test-face-at-match "** Nested item")
+              :to-equal 'font-lock-constant-face)))
+
+  (it "headings after list markers are not affected by inline misparse"
+    (assume asciidoc-test-grammars-available skip-reason)
+    (with-sample-buffer
+      ;; == Final Notes comes after the list section with * markers
+      (expect (asciidoc-test-face-at-match "== Final Notes")
+              :to-equal 'asciidoc-title-1-face)))
+
+  (it "listing block body overrides inline misparse"
+    (assume asciidoc-test-grammars-available skip-reason)
+    (with-sample-buffer
+      ;; Code inside a listing block should get string face even if
+      ;; the inline parser sees emphasis markers.
+      (expect (asciidoc-test-face-at-match "def hello")
+              :to-equal 'font-lock-string-face))))
+
 ;;; Navigation integration
 
 (describe "Integration: navigation"
@@ -178,7 +213,9 @@ OCCURRENCE selects which match (default 1)."
       (beginning-of-defun)
       (expect (looking-at "== Final Notes") :to-be-truthy)
       (beginning-of-defun)
-      (expect (looking-at "== Macros and Links") :to-be-truthy)))
+      (expect (looking-at "== Macros and Links") :to-be-truthy)
+      (beginning-of-defun)
+      (expect (looking-at "== Admonitions and Blocks") :to-be-truthy)))
 
   (it "moves forward by sentence across block elements"
     (assume asciidoc-test-grammars-available skip-reason)
