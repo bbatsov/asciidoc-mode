@@ -144,6 +144,8 @@ Open any `.adoc` or `.asciidoc` file and `asciidoc-mode` activates automatically
 
 The grammar author split them because block-level and inline-level parsing have fundamentally different rules in AsciiDoc, and separating them keeps each grammar simpler. Both parsers operate on the entire buffer without range restrictions -- this is the same dual-parser pattern used by Emacs's built-in `markdown-ts-mode`.
 
+Because both parsers run independently on the same text, they can disagree. In particular, the inline parser misinterprets `*` and `**` list markers as emphasis delimiters, creating spurious emphasis spans that can swallow subsequent inline content (e.g. autolinks). To mitigate this, all block-level font-lock rules use `:override t` so that block-level faces (list markers, headings, code blocks, etc.) always win over incorrect inline faces. This doesn't fix inline elements consumed by the spurious emphasis nodes -- that requires an upstream grammar fix (see {url-repo}/issues/2[#2]).
+
 When grammars are unavailable, the mode falls back to plain `text-mode` with comment support only. No tree-sitter features are activated in this case.
 
 == Development
