@@ -1,0 +1,21 @@
+= Changelog
+
+== main (unreleased)
+
+== 0.1.0 (2026-02-22)
+
+Initial release.
+
+=== New Features
+
+* Tree-sitter-based syntax highlighting for headings, inline markup (bold, italic, monospace, highlight, passthrough), blocks (listing, literal, quoted), lists, admonitions, attributes, macros, metadata, links, cross-references, footnotes, and replacements
+* Dual-parser architecture (`asciidoc` for block-level, `asciidoc-inline` for inline) following the same pattern as `markdown-ts-mode`
+* Section navigation via `beginning-of-defun` / `end-of-defun` (`C-M-a` / `C-M-e`)
+* Sentence-level movement (`M-a` / `M-e`) across paragraphs, blocks, lists, and comments
+* Imenu support for section headings
+* Outline minor mode enabled by default for heading folding and navigation
+* Comment support (`//` line comments)
+* AsciiDoc mode menu with navigation, visibility, heading manipulation, and utility commands
+* `asciidoc-install-grammars` command for one-step grammar installation
+* Graceful degradation to `text-mode` when grammars are unavailable
+* Auto-mode entries for `.adoc` and `.asciidoc` files
