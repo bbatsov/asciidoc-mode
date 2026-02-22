@@ -2,6 +2,8 @@
 :url-repo: https://github.com/bbatsov/asciidoc-mode
 :url-grammar: https://github.com/cathaysia/tree-sitter-asciidoc
 
+image:https://melpa.org/packages/asciidoc-mode-badge.svg[MELPA,link="https://melpa.org/#/asciidoc-mode"]
+image:https://stable.melpa.org/packages/asciidoc-mode-badge.svg[MELPA Stable,link="https://stable.melpa.org/#/asciidoc-mode"]
 image:{url-repo}/actions/workflows/ci.yml/badge.svg[CI,link="{url-repo}/actions/workflows/ci.yml"]
 image:https://img.shields.io/badge/license-GPL_3-green.svg[License GPL 3,link="https://www.gnu.org/copyleft/gpl.html"]
 
@@ -109,11 +111,26 @@ This downloads and compiles both grammars automatically. You only need to do thi
 
 === Package Installation
 
-The package is not yet available on MELPA or NonGNU ELPA. For now, install directly from GitHub.
+==== MELPA
+
+The package is available on https://melpa.org/#/asciidoc-mode[MELPA] and https://stable.melpa.org/#/asciidoc-mode[MELPA Stable]. If you've configured MELPA as a package source:
+
+[source,emacs-lisp]
+----
+M-x package-install RET asciidoc-mode RET
+----
+
+Or with `use-package`:
+
+[source,emacs-lisp]
+----
+(use-package asciidoc-mode
+  :ensure t)
+----
 
 ==== use-package with vc
 
-Emacs 30+ has built-in support for installing packages from VCS:
+Alternatively, Emacs 30+ can install directly from VCS:
 
 [source,emacs-lisp]
 ----
