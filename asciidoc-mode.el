@@ -187,11 +187,6 @@ Each entry has the form (LANG URL REVISION SOURCE-DIR CC C++).")
 
    :language 'asciidoc
    :override t
-   :feature 'admonition
-   '((admonition) @font-lock-keyword-face)
-
-   :language 'asciidoc
-   :override t
    :feature 'attribute
    '((document_attr (attr_name) @font-lock-variable-name-face)
      (document_attr (line) @font-lock-string-face)
@@ -248,10 +243,22 @@ Each entry has the form (LANG URL REVISION SOURCE-DIR CC C++).")
 
 (defvar asciidoc--treesit-font-lock-feature-list
   '((comment title)
-    (block delimiter table list admonition attribute macro metadata)
+    (block delimiter table list attribute macro metadata)
     (inline-markup inline-link inline-macro inline-reference)
     (replacement))
   "Font-lock feature list for `asciidoc-mode'.")
+
+;;; Admonition labels
+
+;; The block grammar consumes a paragraph-style admonition label (e.g.
+;; \"NOTE\") without emitting a node for it, so it can't be highlighted
+;; via tree-sitter.  A small font-lock keyword fills the gap and, unlike
+;; the previous tree-sitter rule, leaves the admonition body to inline
+;; fontification instead of overriding it.
+(defvar asciidoc--admonition-font-lock-keywords
+  '(("^\\(?:NOTE\\|TIP\\|IMPORTANT\\|CAUTION\\|WARNING\\):"
+     0 'font-lock-keyword-face t))
+  "Font-lock keywords for paragraph-style admonition labels.")
 
 ;;; Imenu
 
@@ -323,7 +330,11 @@ Install them with \\[asciidoc-install-grammars].
     (treesit-major-mode-setup)
 
     ;; Enable outline-minor-mode for heading navigation and folding.
-    (outline-minor-mode 1)))
+    (outline-minor-mode 1))
+
+  ;; Added last: `font-lock-add-keywords' must run after
+  ;; `treesit-major-mode-setup' or it suppresses tree-sitter fontification.
+  (font-lock-add-keywords nil asciidoc--admonition-font-lock-keywords))
 
 ;;; Menu
 

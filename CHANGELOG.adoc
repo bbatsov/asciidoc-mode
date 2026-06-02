@@ -2,6 +2,10 @@
 
 == main (unreleased)
 
+=== Bug Fixes
+
+* Fix admonition fontification: highlight the label (e.g. `NOTE:`) instead of the body, so inline markup such as `code` and links inside an admonition is no longer clobbered. This also covers multi-line admonitions.
+
 == 0.2.0 (2026-06-02)
 
 === New Features

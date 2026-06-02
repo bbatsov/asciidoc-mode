@@ -136,14 +136,15 @@ OCCURRENCE selects which match (default 1)."
       (expect (asciidoc-test-face-at-match "* Enable feature A")
               :to-equal 'font-lock-constant-face)))
 
-  (it "fontifies admonition content"
+  (it "fontifies the admonition label"
     (assume asciidoc-test-grammars-available skip-reason)
     (with-sample-buffer
-      ;; The admonition node starts at ": " after the keyword.
+      ;; The whole "NOTE:" label (keyword + colon) is highlighted via a
+      ;; font-lock keyword, since the grammar doesn't expose it as a node.
       (goto-char (point-min))
       (search-forward "NOTE:")
       (expect (get-text-property (match-beginning 0) 'face)
-              :to-be nil)
+              :to-equal 'font-lock-keyword-face)
       (expect (get-text-property (+ (match-beginning 0) 4) 'face)
               :to-equal 'font-lock-keyword-face)))
 

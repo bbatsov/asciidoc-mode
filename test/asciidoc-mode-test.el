@@ -272,15 +272,34 @@
     (unless asciidoc-test-grammars-available
       (setq skip-reason "tree-sitter grammars not installed")))
 
-  (it "fontifies NOTE admonition content"
+  (it "fontifies the NOTE label as a keyword"
     (assume asciidoc-test-grammars-available skip-reason)
-    ;; The grammar doesn't include the keyword ("NOTE") in the
-    ;; admonition node -- fontification starts at the ": " separator.
+    ;; The whole "NOTE:" label is highlighted via a font-lock keyword.
     (with-fontified-asciidoc-buffer "= Title\n\nNOTE: This is a note.\n"
-      ;; Position of ":" after "NOTE" in the full buffer
-      (let ((pos (string-match ": This" (buffer-string))))
+      (let ((pos (string-match "NOTE:" (buffer-string))))
+        ;; the keyword itself
         (expect (asciidoc-test-face-at (1+ pos))
-                :to-equal 'font-lock-keyword-face)))))
+                :to-equal 'font-lock-keyword-face)
+        ;; the trailing colon
+        (expect (asciidoc-test-face-at (+ 1 pos 4))
+                :to-equal 'font-lock-keyword-face))))
+
+  (it "does not clobber inline markup in the admonition body"
+    (assume asciidoc-test-grammars-available skip-reason)
+    ;; Inline `code` inside an admonition body must still be fontified as
+    ;; monospace, not overridden by the admonition label highlighting.
+    (with-fontified-asciidoc-buffer "= Title\n\nNOTE: see `code` here.\n"
+      (let ((pos (string-match "`code`" (buffer-string))))
+        (expect (asciidoc-test-face-at (1+ pos))
+                :to-equal 'font-lock-string-face))))
+
+  (it "recognizes all admonition labels"
+    (assume asciidoc-test-grammars-available skip-reason)
+    (dolist (label '("NOTE" "TIP" "IMPORTANT" "CAUTION" "WARNING"))
+      (with-fontified-asciidoc-buffer (format "= Title\n\n%s: body.\n" label)
+        (let ((pos (string-match label (buffer-string))))
+          (expect (asciidoc-test-face-at (1+ pos))
+                  :to-equal 'font-lock-keyword-face))))))
 
 ;;; Imenu
 
