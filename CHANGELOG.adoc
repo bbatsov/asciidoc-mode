@@ -4,6 +4,7 @@
 
 === Bug Fixes
 
+* Restrict the inline parser to inline-content ranges. Previously it parsed the whole buffer, so block markup (e.g. a `*` list marker) could throw it into an error state that suppressed inline highlighting (`code`, links, etc.) for the rest of the buffer. Inline markup inside list items, table cells, and quote blocks now fontifies reliably.
 * Fix admonition fontification: highlight the label (e.g. `NOTE:`) instead of the body, so inline markup such as `code` and links inside an admonition is no longer clobbered. This also covers multi-line admonitions.
 
 == 0.2.0 (2026-06-02)

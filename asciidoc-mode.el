@@ -303,6 +303,30 @@ Install them with \\[asciidoc-install-grammars].
     (setq-local treesit-primary-parser
                 (car (treesit-parser-list nil 'asciidoc)))
 
+    ;; Restrict the inline parser to actual inline-content ranges.  The
+    ;; inline grammar is meant to parse a single inline span; run over the
+    ;; whole buffer it misreads block markup (e.g. `*' list markers) as
+    ;; emphasis and can produce an error spanning the rest of the buffer,
+    ;; which suppresses inline fontification.  Embedding it into the block
+    ;; parser via `treesit-range-rules' scopes it to the relevant text.
+    ;; The `line' / `table_cell_content' children are captured rather than
+    ;; their containers so block markers (`*', `.', `=') stay out of the
+    ;; inline ranges.
+    (setq-local treesit-range-settings
+                (treesit-range-rules
+                 :embed 'asciidoc-inline
+                 :host 'asciidoc
+                 '((paragraph (line) @cap)
+                   (admonition (line) @cap)
+                   (unordered_list_item (line) @cap)
+                   (ordered_list_item (line) @cap)
+                   (checked_list_item (line) @cap)
+                   (callout_list_item (line) @cap)
+                   (quoted_block (line) @cap)
+                   (table_cell (table_cell_content) @cap))))
+    (setq-local treesit-language-at-point-function
+                (lambda (_pos) 'asciidoc))
+
     ;; Font-lock
     (setq-local treesit-font-lock-settings asciidoc--font-lock-settings)
     (setq-local treesit-font-lock-feature-list

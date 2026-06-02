@@ -136,6 +136,51 @@
         (expect (asciidoc-test-face-at (+ (point-min) pos))
                 :to-equal 'font-lock-constant-face)))))
 
+;;; Font-lock: inline content inside blocks
+;;
+;; The inline parser is restricted to inline-content ranges via
+;; `treesit-range-settings'.  These tests guard that inline markup is
+;; still fontified inside the various containers, and that block markup
+;; no longer poisons inline fontification later in the buffer.
+
+(describe "Font-lock: inline content inside blocks"
+  :var (skip-reason)
+  (before-all
+    (unless asciidoc-test-grammars-available
+      (setq skip-reason "tree-sitter grammars not installed")))
+
+  (it "fontifies code inside an unordered list item"
+    (assume asciidoc-test-grammars-available skip-reason)
+    (expect (asciidoc-test-mono-face "* item with `code` here\n" "`code`")
+            :to-equal 'font-lock-string-face))
+
+  (it "fontifies code inside a table cell"
+    (assume asciidoc-test-grammars-available skip-reason)
+    (expect (asciidoc-test-mono-face "|===\n| cell `code` text\n|===\n" "`code`")
+            :to-equal 'font-lock-string-face))
+
+  (it "fontifies code inside a quote block"
+    (assume asciidoc-test-grammars-available skip-reason)
+    (expect (asciidoc-test-mono-face "____\nquoted `code` text\n____\n" "`code`")
+            :to-equal 'font-lock-string-face))
+
+  (it "fontifies code after a stray list marker (no cascade)"
+    (assume asciidoc-test-grammars-available skip-reason)
+    ;; A `*' list marker with no matching `*' used to put the inline
+    ;; parser into an error state spanning the rest of the buffer.
+    (expect (asciidoc-test-mono-face
+             "* a lone bullet\n\nlater paragraph with `code`.\n" "`code`")
+            :to-equal 'font-lock-string-face))
+
+  (it "produces no inline parse error for a mixed document"
+    (assume asciidoc-test-grammars-available skip-reason)
+    (with-fontified-asciidoc-buffer
+        "= Title\n\n* one\n* two\n* three\n\nText `code` and more.\n"
+      (let ((parser (car (treesit-parser-list nil 'asciidoc-inline))))
+        (expect (string-match-p
+                 "ERROR" (treesit-node-string (treesit-parser-root-node parser)))
+                :to-be nil)))))
+
 ;;; Font-lock: blocks
 
 (describe "Font-lock: blocks"
