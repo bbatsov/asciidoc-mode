@@ -151,7 +151,13 @@ OCCURRENCE selects which match (default 1)."
     (assume asciidoc-test-grammars-available skip-reason)
     (with-sample-buffer
       (expect (asciidoc-test-face-at-match "toc::")
-              :to-equal 'font-lock-function-call-face))))
+              :to-equal 'font-lock-function-call-face)))
+
+  (it "fontifies table delimiters"
+    (assume asciidoc-test-grammars-available skip-reason)
+    (with-sample-buffer
+      (expect (asciidoc-test-face-at-match "|===")
+              :to-equal 'font-lock-delimiter-face))))
 
 ;;; Block-level override
 

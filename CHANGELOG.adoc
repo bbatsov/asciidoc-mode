@@ -2,6 +2,12 @@
 
 == main (unreleased)
 
+=== New Features
+
+* Fontify table delimiters (`|===`) and cell format specifiers.
+* Fontify delimited block markers for listing, literal, passthrough, open, quote, and example blocks.
+* Fontify document attribute values (e.g. `Jane Doe` in `:author: Jane Doe`).
+
 == 0.1.0 (2026-02-22)
 
 Initial release.

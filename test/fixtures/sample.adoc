@@ -41,6 +41,13 @@ An indented literal block:
 
   $ make install
 
+A table:
+
+|===
+| Name | Value
+| foo | bar
+|===
+
 == Admonitions and Blocks
 
 NOTE: Remember to save your work.

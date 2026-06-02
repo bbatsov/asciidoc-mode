@@ -159,6 +159,25 @@ Each entry has the form (LANG URL REVISION SOURCE-DIR CC C++).")
 
    :language 'asciidoc
    :override t
+   :feature 'delimiter
+   '((listing_block_start_marker) @font-lock-delimiter-face
+     (listing_block_end_marker) @font-lock-delimiter-face
+     (literal_block_marker) @font-lock-delimiter-face
+     (passthrough_block_marker) @font-lock-delimiter-face
+     (open_block_marker) @font-lock-delimiter-face
+     (quoted_block_start_marker) @font-lock-delimiter-face
+     (quoted_block_end_marker) @font-lock-delimiter-face
+     (delimited_block_start_marker) @font-lock-delimiter-face
+     (delimited_block_end_marker) @font-lock-delimiter-face)
+
+   :language 'asciidoc
+   :override t
+   :feature 'table
+   '((table_block_marker) @font-lock-delimiter-face
+     (table_cell_attr) @font-lock-preprocessor-face)
+
+   :language 'asciidoc
+   :override t
    :feature 'list
    '((ordered_list_marker) @font-lock-constant-face
      (unordered_list_marker) @font-lock-constant-face
@@ -175,6 +194,7 @@ Each entry has the form (LANG URL REVISION SOURCE-DIR CC C++).")
    :override t
    :feature 'attribute
    '((document_attr (attr_name) @font-lock-variable-name-face)
+     (document_attr (line) @font-lock-string-face)
      (element_attr) @font-lock-preprocessor-face)
 
    :language 'asciidoc
@@ -228,7 +248,7 @@ Each entry has the form (LANG URL REVISION SOURCE-DIR CC C++).")
 
 (defvar asciidoc--treesit-font-lock-feature-list
   '((comment title)
-    (block list admonition attribute macro metadata)
+    (block delimiter table list admonition attribute macro metadata)
     (inline-markup inline-link inline-macro inline-reference)
     (replacement))
   "Font-lock feature list for `asciidoc-mode'.")

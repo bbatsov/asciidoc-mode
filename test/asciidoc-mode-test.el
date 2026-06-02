@@ -176,6 +176,72 @@
       (expect (asciidoc-test-face-at (point))
               :to-equal 'font-lock-comment-delimiter-face))))
 
+;;; Font-lock: block delimiters
+
+(describe "Font-lock: block delimiters"
+  :var (skip-reason)
+  (before-all
+    (unless asciidoc-test-grammars-available
+      (setq skip-reason "tree-sitter grammars not installed")))
+
+  (it "fontifies listing block delimiters"
+    (assume asciidoc-test-grammars-available skip-reason)
+    (with-fontified-asciidoc-buffer "----\ncode\n----\n"
+      (expect (asciidoc-test-face-at 1)
+              :to-equal 'font-lock-delimiter-face)))
+
+  (it "fontifies literal block delimiters"
+    (assume asciidoc-test-grammars-available skip-reason)
+    (with-fontified-asciidoc-buffer "....\nlit\n....\n"
+      (expect (asciidoc-test-face-at 1)
+              :to-equal 'font-lock-delimiter-face)))
+
+  (it "fontifies passthrough block delimiters"
+    (assume asciidoc-test-grammars-available skip-reason)
+    (with-fontified-asciidoc-buffer "++++\npass\n++++\n"
+      (expect (asciidoc-test-face-at 1)
+              :to-equal 'font-lock-delimiter-face)))
+
+  (it "fontifies open block delimiters"
+    (assume asciidoc-test-grammars-available skip-reason)
+    (with-fontified-asciidoc-buffer "--\nopen\n--\n"
+      (expect (asciidoc-test-face-at 1)
+              :to-equal 'font-lock-delimiter-face)))
+
+  (it "fontifies quote block delimiters"
+    (assume asciidoc-test-grammars-available skip-reason)
+    (with-fontified-asciidoc-buffer "____\nquote\n____\n"
+      (expect (asciidoc-test-face-at 1)
+              :to-equal 'font-lock-delimiter-face)))
+
+  (it "fontifies example block delimiters"
+    (assume asciidoc-test-grammars-available skip-reason)
+    (with-fontified-asciidoc-buffer "====\nexample\n====\n"
+      (expect (asciidoc-test-face-at 1)
+              :to-equal 'font-lock-delimiter-face))))
+
+;;; Font-lock: tables
+
+(describe "Font-lock: tables"
+  :var (skip-reason)
+  (before-all
+    (unless asciidoc-test-grammars-available
+      (setq skip-reason "tree-sitter grammars not installed")))
+
+  (it "fontifies table delimiters"
+    (assume asciidoc-test-grammars-available skip-reason)
+    (with-fontified-asciidoc-buffer "|===\n| A | B\n|===\n"
+      (expect (asciidoc-test-face-at 1)
+              :to-equal 'font-lock-delimiter-face)))
+
+  (it "fontifies table cell format specifiers"
+    (assume asciidoc-test-grammars-available skip-reason)
+    (with-fontified-asciidoc-buffer "|===\na| x\n|===\n"
+      ;; The "a" cell-format spec on line 2 should get preprocessor face.
+      (let ((pos (string-match "a| x" (buffer-string))))
+        (expect (asciidoc-test-face-at (1+ pos))
+                :to-equal 'font-lock-preprocessor-face)))))
+
 ;;; Font-lock: attributes
 
 (describe "Font-lock: attributes"
@@ -189,7 +255,14 @@
     (with-fontified-asciidoc-buffer ":author: Someone\n"
       ;; "author" should get variable-name face
       (expect (asciidoc-test-face-at 2)
-              :to-equal 'font-lock-variable-name-face))))
+              :to-equal 'font-lock-variable-name-face)))
+
+  (it "fontifies document attribute value"
+    (assume asciidoc-test-grammars-available skip-reason)
+    (with-fontified-asciidoc-buffer ":author: Jane Doe\n"
+      (let ((pos (string-match "Jane" (buffer-string))))
+        (expect (asciidoc-test-face-at (1+ pos))
+                :to-equal 'font-lock-string-face)))))
 
 ;;; Font-lock: admonitions
 
