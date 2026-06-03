@@ -184,7 +184,12 @@ Each entry has the form (LANG URL REVISION SOURCE-DIR CC C++).")
    :language 'asciidoc
    :override t
    :feature 'title
-   '((document_title) @asciidoc-document-title-face
+   ;; The grammar nests the header's `document_attr' entries inside
+   ;; `document_title', so face only the title's marker and its own line --
+   ;; not the whole node, which would bleed the title face onto the
+   ;; `:name: value' attribute lines below the title.
+   '((document_title (title_h0_marker) @asciidoc-document-title-face)
+     (document_title (line) @asciidoc-document-title-face)
      (title1) @asciidoc-title-1-face
      (title2) @asciidoc-title-2-face
      (title3) @asciidoc-title-3-face
@@ -303,6 +308,17 @@ Each entry has the form (LANG URL REVISION SOURCE-DIR CC C++).")
   '(("^\\(?:NOTE\\|TIP\\|IMPORTANT\\|CAUTION\\|WARNING\\):"
      0 'font-lock-keyword-face t))
   "Font-lock keywords for paragraph-style admonition labels.")
+
+;;; Attribute references
+
+;; The inline grammar doesn't recognize attribute references (`{name}'
+;; expands to nothing), so highlight them with a font-lock keyword.  The
+;; nil override leaves existing faces (code blocks, strings) untouched, so
+;; e.g. a shell `${VAR}' inside a source block is not mistaken for one.
+(defvar asciidoc--attribute-reference-font-lock-keywords
+  '(("{\\(?:[a-zA-Z0-9_][a-zA-Z0-9_-]*\\)}"
+     0 'font-lock-variable-name-face nil))
+  "Font-lock keywords for inline attribute references like `{name}'.")
 
 ;;; Native source block fontification
 
@@ -528,6 +544,7 @@ Install them with \\[asciidoc-install-grammars].
   ;; string face, replacing it with native faces (see
   ;; `asciidoc--fontify-code-blocks').
   (font-lock-add-keywords nil asciidoc--admonition-font-lock-keywords)
+  (font-lock-add-keywords nil asciidoc--attribute-reference-font-lock-keywords)
   (font-lock-add-keywords nil '((asciidoc--fontify-code-blocks)) 'append))
 
 ;;; Menu

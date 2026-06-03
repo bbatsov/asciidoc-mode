@@ -83,7 +83,20 @@
     (assume asciidoc-test-grammars-available skip-reason)
     (with-fontified-asciidoc-buffer "====== Section 5\n"
       (expect (asciidoc-test-face-at 1)
-              :to-equal 'asciidoc-title-5-face))))
+              :to-equal 'asciidoc-title-5-face)))
+
+  (it "does not bleed the title face onto header attribute lines"
+    (assume asciidoc-test-grammars-available skip-reason)
+    ;; The grammar nests document attributes inside `document_title'; the
+    ;; title face must not cover the `:name: value' lines below the title.
+    (with-fontified-asciidoc-buffer "= Title\n:author: Jane\n\nBody.\n"
+      (let ((pos (string-match ":author:" (buffer-string))))
+        ;; the attribute name is a variable, not part of the title
+        (expect (asciidoc-test-face-at (+ 1 pos 1))
+                :to-equal 'font-lock-variable-name-face)
+        ;; the leading ":" delimiter is not title-faced
+        (expect (asciidoc-test-face-at (1+ pos))
+                :not :to-equal 'asciidoc-document-title-face)))))
 
 ;;; Font-lock: comments
 
@@ -307,7 +320,16 @@
     (with-fontified-asciidoc-buffer ":author: Jane Doe\n"
       (let ((pos (string-match "Jane" (buffer-string))))
         (expect (asciidoc-test-face-at (1+ pos))
-                :to-equal 'font-lock-string-face)))))
+                :to-equal 'font-lock-string-face))))
+
+  (it "highlights inline attribute references"
+    (assume asciidoc-test-grammars-available skip-reason)
+    ;; The grammar does not parse `{name}' references, so a font-lock
+    ;; keyword highlights them.
+    (with-fontified-asciidoc-buffer "= T\n\nSee {version} now.\n"
+      (let ((pos (string-match "{version}" (buffer-string))))
+        (expect (asciidoc-test-face-at (1+ pos))
+                :to-equal 'font-lock-variable-name-face)))))
 
 ;;; Font-lock: admonitions
 
