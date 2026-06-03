@@ -89,7 +89,10 @@
                               italic                        ; _italic_
                               font-lock-string-face         ; `mono` / code bodies
                               font-lock-warning-face        ; #highlight#
-                              font-lock-constant-face       ; list markers / links / xrefs
+                              font-lock-constant-face       ; list markers
+                              asciidoc-link-face            ; links / URL labels
+                              asciidoc-cross-reference-face ; <<id>> cross-references
+                              asciidoc-anchor-face          ; [[id]] anchors
                               font-lock-keyword-face        ; admonition labels
                               font-lock-comment-face        ; // comments
                               font-lock-delimiter-face      ; block / table delimiters

@@ -49,6 +49,7 @@
 
 (require 'treesit)
 (require 'subr-x)
+(require 'outline)
 
 ;;; Customization
 
@@ -167,6 +168,21 @@ Each entry has the form (LANG URL REVISION SOURCE-DIR CC C++).")
   "Face for AsciiDoc level-5 section title (====== Title)."
   :group 'asciidoc)
 
+(defface asciidoc-link-face
+  '((t :inherit link))
+  "Face for links and link text (autolinks, URL labels)."
+  :group 'asciidoc)
+
+(defface asciidoc-cross-reference-face
+  '((t :inherit font-lock-constant-face))
+  "Face for internal cross-references (e.g. <<id>>)."
+  :group 'asciidoc)
+
+(defface asciidoc-anchor-face
+  '((t :inherit font-lock-type-face))
+  "Face for anchor definitions (e.g. [[id]] and [#id])."
+  :group 'asciidoc)
+
 ;;; Font-lock
 
 (defvar asciidoc--font-lock-settings
@@ -264,9 +280,9 @@ Each entry has the form (LANG URL REVISION SOURCE-DIR CC C++).")
 
    :language 'asciidoc-inline
    :feature 'inline-link
-   '((autolink) @font-lock-constant-face
-     (xref) @font-lock-constant-face
-     (uri_label) @link)
+   '((autolink) @asciidoc-link-face
+     (xref) @asciidoc-cross-reference-face
+     (uri_label) @asciidoc-link-face)
 
    :language 'asciidoc-inline
    :feature 'inline-macro
@@ -277,7 +293,7 @@ Each entry has the form (LANG URL REVISION SOURCE-DIR CC C++).")
 
    :language 'asciidoc-inline
    :feature 'inline-reference
-   '((id_assignment) @font-lock-preprocessor-face
+   '((id_assignment) @asciidoc-anchor-face
      (index_term) @font-lock-doc-face
      (index_term2) @font-lock-doc-face
      (intrinsic_attributes_pair) @font-lock-escape-face)
@@ -461,6 +477,37 @@ and always returns nil, doing its work as a side effect."
   "\\`\\(?:document_title\\|title[1-5]\\)\\'"
   "Regexp matching title node types for outline integration.")
 
+;;; Heading commands
+
+(defconst asciidoc--heading-regexp "^\\(=\\{1,6\\}\\)[ \t]"
+  "Regexp matching a one-line AsciiDoc heading.
+Group 1 is the run of leading `=' markers.")
+
+(defun asciidoc--heading-marker-bounds ()
+  "Return (BEG . END) of the current line's heading markers, or nil."
+  (save-excursion
+    (beginning-of-line)
+    (when (looking-at asciidoc--heading-regexp)
+      (cons (match-beginning 1) (match-end 1)))))
+
+(defun asciidoc-promote-heading ()
+  "Promote the heading on the current line by removing one `=' marker."
+  (interactive)
+  (let ((bounds (asciidoc--heading-marker-bounds)))
+    (cond ((null bounds) (user-error "Point is not on a heading"))
+          ((<= (- (cdr bounds) (car bounds)) 1)
+           (user-error "Already at the topmost heading level"))
+          (t (save-excursion (goto-char (car bounds)) (delete-char 1))))))
+
+(defun asciidoc-demote-heading ()
+  "Demote the heading on the current line by adding one `=' marker."
+  (interactive)
+  (let ((bounds (asciidoc--heading-marker-bounds)))
+    (cond ((null bounds) (user-error "Point is not on a heading"))
+          ((>= (- (cdr bounds) (car bounds)) 6)
+           (user-error "Already at the deepest heading level"))
+          (t (save-excursion (goto-char (car bounds)) (insert "="))))))
+
 ;;; Mode definition
 
 ;;;###autoload
@@ -539,7 +586,9 @@ Install them with \\[asciidoc-install-grammars].
 
     (treesit-major-mode-setup)
 
-    ;; Enable outline-minor-mode for heading navigation and folding.
+    ;; Enable outline-minor-mode for heading navigation and folding, with
+    ;; TAB/S-TAB cycling visibility on heading lines.
+    (setq-local outline-minor-mode-cycle t)
     (outline-minor-mode 1))
 
   ;; Added last: `font-lock-add-keywords' must run after
@@ -550,6 +599,19 @@ Install them with \\[asciidoc-install-grammars].
   (font-lock-add-keywords nil asciidoc--admonition-font-lock-keywords)
   (font-lock-add-keywords nil asciidoc--attribute-reference-font-lock-keywords)
   (font-lock-add-keywords nil '((asciidoc--fontify-code-blocks)) 'append))
+
+;;; Keymap
+
+;; Heading-oriented bindings modelled on `org-mode' / `adoc-mode'.
+(keymap-set asciidoc-mode-map "M-<left>" #'asciidoc-promote-heading)
+(keymap-set asciidoc-mode-map "M-<right>" #'asciidoc-demote-heading)
+(keymap-set asciidoc-mode-map "M-<up>" #'outline-move-subtree-up)
+(keymap-set asciidoc-mode-map "M-<down>" #'outline-move-subtree-down)
+(keymap-set asciidoc-mode-map "C-c C-n" #'outline-next-visible-heading)
+(keymap-set asciidoc-mode-map "C-c C-p" #'outline-previous-visible-heading)
+(keymap-set asciidoc-mode-map "C-c C-f" #'outline-forward-same-level)
+(keymap-set asciidoc-mode-map "C-c C-b" #'outline-backward-same-level)
+(keymap-set asciidoc-mode-map "C-c C-u" #'outline-up-heading)
 
 ;;; Menu
 
@@ -575,8 +637,8 @@ Install them with \\[asciidoc-install-grammars].
      ["Hide Body" outline-hide-body]
      ["Hide Other" outline-hide-other])
     ("Headings"
-     ["Promote Subtree" outline-promote]
-     ["Demote Subtree" outline-demote]
+     ["Promote Heading" asciidoc-promote-heading]
+     ["Demote Heading" asciidoc-demote-heading]
      ["Move Subtree Up" outline-move-subtree-up]
      ["Move Subtree Down" outline-move-subtree-down]
      "---"

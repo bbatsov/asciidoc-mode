@@ -9,6 +9,8 @@
 
 === New Features
 
+* Add heading commands `asciidoc-promote-heading` and `asciidoc-demote-heading` (add/remove a `=` marker), plus an org-style keymap: `M-left`/`M-right` promote/demote, `M-up`/`M-down` move a subtree, and `C-c C-n`/`C-c C-p`/`C-c C-f`/`C-c C-b`/`C-c C-u` for heading navigation. `TAB`/`S-TAB` now cycle heading visibility. Note that `M-left`/`M-right` shadow the default `left-word`/`right-word`.
+* Use dedicated, customizable faces for links (`asciidoc-link-face`), cross-references (`asciidoc-cross-reference-face`), and anchors (`asciidoc-anchor-face`) so they're visually distinct, instead of reusing generic font-lock faces.
 * Highlight inline attribute references like `{name}`. The grammar doesn't recognize them, so they're fontified via a font-lock keyword; existing faces (code blocks, strings) are left untouched.
 
 == 0.3.0 (2026-06-03)

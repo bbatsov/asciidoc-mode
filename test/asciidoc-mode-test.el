@@ -147,7 +147,21 @@
     (with-fontified-asciidoc-buffer "Visit https://example.com for details.\n"
       (let ((pos (string-match "https" "Visit https://example.com for details.")))
         (expect (asciidoc-test-face-at (+ (point-min) pos))
-                :to-equal 'font-lock-constant-face)))))
+                :to-equal 'asciidoc-link-face))))
+
+  (it "fontifies cross-references distinctly from links"
+    (assume asciidoc-test-grammars-available skip-reason)
+    (with-fontified-asciidoc-buffer "= T\n\nSee <<some-id>> for details.\n"
+      (let ((pos (string-match "<<some-id>>" (buffer-string))))
+        (expect (asciidoc-test-face-at (1+ pos))
+                :to-equal 'asciidoc-cross-reference-face))))
+
+  (it "fontifies anchors with the anchor face"
+    (assume asciidoc-test-grammars-available skip-reason)
+    (with-fontified-asciidoc-buffer "= T\n\n[[my-anchor]] target.\n"
+      (let ((pos (string-match "\\[\\[my-anchor" (buffer-string))))
+        (expect (asciidoc-test-face-at (+ pos 2))
+                :to-equal 'asciidoc-anchor-face)))))
 
 ;;; Font-lock: inline content inside blocks
 ;;
@@ -514,6 +528,52 @@
       (fill-paragraph)
       ;; The `//' inside the URL must not become a fill/comment prefix.
       (expect (string-match-p "^[ \t]*//" (buffer-string)) :to-be nil))))
+
+;;; Heading commands
+
+(describe "Heading commands"
+  (cl-flet ((line-after (text cmd)
+              (with-asciidoc-buffer text
+                (goto-char (point-min))
+                (funcall cmd)
+                (buffer-substring-no-properties
+                 (line-beginning-position) (line-end-position)))))
+
+    (it "demotes a heading by adding a marker"
+      (expect (line-after "== Section\n" #'asciidoc-demote-heading)
+              :to-equal "=== Section"))
+
+    (it "promotes a heading by removing a marker"
+      (expect (line-after "=== Section\n" #'asciidoc-promote-heading)
+              :to-equal "== Section"))
+
+    (it "refuses to promote past the topmost level"
+      (with-asciidoc-buffer "= Title\n"
+        (goto-char (point-min))
+        (expect (asciidoc-promote-heading) :to-throw 'user-error)))
+
+    (it "refuses to demote past the deepest level"
+      (with-asciidoc-buffer "====== Section\n"
+        (goto-char (point-min))
+        (expect (asciidoc-demote-heading) :to-throw 'user-error)))
+
+    (it "errors when point is not on a heading"
+      (with-asciidoc-buffer "Just a paragraph.\n"
+        (goto-char (point-min))
+        (expect (asciidoc-promote-heading) :to-throw 'user-error)))))
+
+;;; Keymap
+
+(describe "Keymap"
+  (it "binds org-style heading keys"
+    (expect (keymap-lookup asciidoc-mode-map "M-<left>")
+            :to-be 'asciidoc-promote-heading)
+    (expect (keymap-lookup asciidoc-mode-map "M-<right>")
+            :to-be 'asciidoc-demote-heading)
+    (expect (keymap-lookup asciidoc-mode-map "C-c C-n")
+            :to-be 'outline-next-visible-heading)
+    (expect (keymap-lookup asciidoc-mode-map "C-c C-u")
+            :to-be 'outline-up-heading)))
 
 (provide 'asciidoc-mode-test)
 ;;; asciidoc-mode-test.el ends here
