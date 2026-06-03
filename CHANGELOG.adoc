@@ -2,6 +2,14 @@
 
 == main (unreleased)
 
+=== Bug Fixes
+
+* Stop the document title face from bleeding onto the header's attribute lines. The grammar nests `:name: value` attribute entries inside the `document_title` node, so the whole header (not just the title) was rendered with the title face.
+
+=== New Features
+
+* Highlight inline attribute references like `{name}`. The grammar doesn't recognize them, so they're fontified via a font-lock keyword; existing faces (code blocks, strings) are left untouched.
+
 == 0.3.0 (2026-06-03)
 
 === New Features
