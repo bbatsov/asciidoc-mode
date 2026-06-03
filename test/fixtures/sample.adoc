@@ -37,6 +37,14 @@ def hello():
     print("Hello, world!")
 ----
 
+A source block:
+
+[source,emacs-lisp]
+----
+(defun greet (name)
+  (message "Hello, %s" name))
+----
+
 An indented literal block:
 
   $ make install

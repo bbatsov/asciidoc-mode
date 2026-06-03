@@ -346,6 +346,79 @@
           (expect (asciidoc-test-face-at (1+ pos))
                   :to-equal 'font-lock-keyword-face))))))
 
+;;; Native source block fontification
+
+(describe "Source block language extraction"
+  (it "extracts the language from a source block attribute list"
+    (expect (asciidoc--code-block-language "source,ruby") :to-equal "ruby"))
+  (it "handles an empty leading style"
+    (expect (asciidoc--code-block-language ",js") :to-equal "js"))
+  (it "ignores positional style options"
+    (expect (asciidoc--code-block-language "source%nowrap,python")
+            :to-equal "python"))
+  (it "returns nil for non-source styles"
+    (expect (asciidoc--code-block-language "NOTE") :to-be nil)
+    (expect (asciidoc--code-block-language "quote") :to-be nil))
+  (it "returns nil when there is no language"
+    (expect (asciidoc--code-block-language "source") :to-be nil)))
+
+(describe "Native source block fontification"
+  :var (skip-reason)
+  (before-all
+    (unless asciidoc-test-grammars-available
+      (setq skip-reason "tree-sitter grammars not installed")))
+
+  (it "fontifies a source block with the language major mode"
+    (assume asciidoc-test-grammars-available skip-reason)
+    (with-fontified-asciidoc-buffer
+        "= T\n\n[source,emacs-lisp]\n----\n(defun foo () nil)\n----\n"
+      (let ((pos (string-match "defun" (buffer-string))))
+        (expect (asciidoc-test-face-at (1+ pos))
+                :to-equal 'font-lock-keyword-face))))
+
+  (it "leaves the string face when fontification is disabled"
+    (assume asciidoc-test-grammars-available skip-reason)
+    (let ((asciidoc-fontify-code-blocks-natively nil))
+      (with-fontified-asciidoc-buffer
+          "= T\n\n[source,emacs-lisp]\n----\n(defun foo () nil)\n----\n"
+        (let ((pos (string-match "defun" (buffer-string))))
+          (expect (asciidoc-test-face-at (1+ pos))
+                  :to-equal 'font-lock-string-face)))))
+
+  (it "respects the size cap"
+    (assume asciidoc-test-grammars-available skip-reason)
+    (let ((asciidoc-fontify-code-blocks-natively 3))
+      (with-fontified-asciidoc-buffer
+          "= T\n\n[source,emacs-lisp]\n----\n(defun foo () nil)\n----\n"
+        (let ((pos (string-match "defun" (buffer-string))))
+          (expect (asciidoc-test-face-at (1+ pos))
+                  :to-equal 'font-lock-string-face)))))
+
+  (it "does not natively fontify a plain listing block"
+    (assume asciidoc-test-grammars-available skip-reason)
+    (with-fontified-asciidoc-buffer "= T\n\n----\n(defun foo () nil)\n----\n"
+      (let ((pos (string-match "defun" (buffer-string))))
+        (expect (asciidoc-test-face-at (1+ pos))
+                :to-equal 'font-lock-string-face))))
+
+  (it "keeps the string face for an unknown language"
+    (assume asciidoc-test-grammars-available skip-reason)
+    (with-fontified-asciidoc-buffer
+        "= T\n\n[source,nosuchlang]\n----\nplain text\n----\n"
+      (let ((pos (string-match "plain" (buffer-string))))
+        (expect (asciidoc-test-face-at (1+ pos))
+                :to-equal 'font-lock-string-face))))
+
+  (it "does not recurse on a [source,asciidoc] block"
+    (assume asciidoc-test-grammars-available skip-reason)
+    ;; Resolving the language to `asciidoc-mode' itself must not re-enter
+    ;; native fontification; the body keeps the verbatim string face.
+    (with-fontified-asciidoc-buffer
+        "= T\n\n[source,asciidoc]\n----\n== Nested\n----\n"
+      (let ((pos (string-match "Nested" (buffer-string))))
+        (expect (asciidoc-test-face-at pos)
+                :to-equal 'font-lock-string-face)))))
+
 ;;; Imenu
 
 (describe "Imenu"

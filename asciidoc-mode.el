@@ -48,6 +48,7 @@
 ;;; Code:
 
 (require 'treesit)
+(require 'subr-x)
 
 ;;; Customization
 
@@ -55,6 +56,44 @@
   "Support for AsciiDoc markup."
   :group 'text
   :link '(url-link "https://github.com/bbatsov/asciidoc-mode"))
+
+(defcustom asciidoc-fontify-code-blocks-natively 5000
+  "Whether to fontify source blocks using the language's major mode.
+When non-nil, the body of a `[source,LANG]' block is fontified with
+LANG's major mode (the same highlighting that mode would apply).  An
+integer value only fontifies blocks whose body is at most that many
+characters, to avoid performance problems on very large blocks; a value
+of t fontifies all blocks regardless of size.  When nil, source block
+bodies keep the plain `font-lock-string-face' used for all verbatim
+blocks."
+  :type '(choice (const :tag "Off" nil)
+                 (const :tag "All blocks" t)
+                 (integer :tag "Up to N characters"))
+  :package-version '(asciidoc-mode . "0.3.0"))
+
+(defcustom asciidoc-code-lang-modes
+  '(("C" . c-mode)
+    ("cpp" . c++-mode)
+    ("C++" . c++-mode)
+    ("bash" . sh-mode)
+    ("shell" . sh-mode)
+    ("elisp" . emacs-lisp-mode)
+    ("ocaml" . tuareg-mode)
+    ("sqlite" . sql-mode))
+  "Alist mapping AsciiDoc source languages to major modes.
+Used by native source block fontification when the major mode cannot be
+derived from the language name as LANG-mode.  The key is the language
+string as it appears in the block (e.g. the `ruby' in `[source,ruby]'),
+the value is the major mode symbol."
+  :type '(alist :key-type string :value-type function)
+  :package-version '(asciidoc-mode . "0.3.0"))
+
+(defcustom asciidoc-fontify-code-block-default-mode 'prog-mode
+  "Fallback major mode for native source block fontification.
+Used when a block has no language, or no major mode can be found for its
+language.  The default, `prog-mode', applies no highlighting."
+  :type 'function
+  :package-version '(asciidoc-mode . "0.3.0"))
 
 ;;; Version
 
@@ -260,6 +299,125 @@ Each entry has the form (LANG URL REVISION SOURCE-DIR CC C++).")
      0 'font-lock-keyword-face t))
   "Font-lock keywords for paragraph-style admonition labels.")
 
+;;; Native source block fontification
+
+;; The block grammar gives us the verbatim body (`listing_block_body' /
+;; `literal_block_body') and the preceding `element_attr' holding the raw
+;; attribute list (e.g. \"source,ruby\").  We fontify the body with the
+;; language's own major mode in a hidden buffer and copy the faces back,
+;; the same technique used by `markdown-mode', `org-mode' and `adoc-mode'.
+
+(defun asciidoc--code-block-language (attr-value)
+  "Return the source language in ATTR-VALUE, or nil.
+ATTR-VALUE is the raw text of a block's attribute list, e.g.
+\"source,ruby\".  The language is the positional second attribute, and
+only for source blocks (a `source' or empty leading style)."
+  (let* ((parts (split-string attr-value "," nil))
+         (style (string-trim (car (split-string (or (car parts) "") "%"))))
+         (lang (and (cdr parts) (string-trim (nth 1 parts)))))
+    (when (and lang
+               (not (string-empty-p lang))
+               (member style '("source" ""))
+               (not (string-search "=" lang)))
+      lang)))
+
+(defun asciidoc--code-block-lang-mode (lang)
+  "Return the major mode to fontify LANG, or nil if none is available.
+Consults `asciidoc-code-lang-modes', then LANG-mode, and honors any
+`major-mode-remap-alist' entry so tree-sitter modes are used when set."
+  (let* ((down (downcase lang))
+         (mode (seq-find
+                #'fboundp
+                (list (cdr (assoc lang asciidoc-code-lang-modes))
+                      (cdr (assoc down asciidoc-code-lang-modes))
+                      (intern (concat lang "-mode"))
+                      (intern (concat down "-mode"))))))
+    (when mode
+      (if (fboundp 'major-mode-remap) (major-mode-remap mode) mode))))
+
+(defun asciidoc--element-attr-value (attr-node)
+  "Return the text of ATTR-NODE's `attr_value' child, or nil."
+  (when-let* ((value (car (treesit-filter-child
+                           attr-node
+                           (lambda (n)
+                             (equal (treesit-node-type n) "attr_value"))))))
+    (treesit-node-text value t)))
+
+(defun asciidoc--fontify-code-block-natively (lang beg end)
+  "Fontify the source block body between BEG and END using LANG's mode.
+Falls back to `asciidoc-fontify-code-block-default-mode' when LANG has no
+available major mode.  Does nothing if the resolved mode is unavailable."
+  (let ((lang-mode (or (asciidoc--code-block-lang-mode lang)
+                       asciidoc-fontify-code-block-default-mode))
+        (dest (current-buffer))
+        (string (buffer-substring-no-properties beg end)))
+    ;; Skip `asciidoc-mode' itself (e.g. `[source,asciidoc]') -- activating it
+    ;; in the scratch buffer would recurse into this fontification.
+    (when (and (fboundp lang-mode)
+               (not (provided-mode-derived-p lang-mode 'asciidoc-mode)))
+      (condition-case nil
+          (let ((faces
+                 (with-current-buffer
+                     (get-buffer-create
+                      (format " *asciidoc-code-fontification:%s*" lang-mode))
+                   ;; Re-enable modification hooks: when this runs from
+                   ;; `jit-lock' they are globally inhibited, which breaks
+                   ;; font-lock in the scratch buffer (Bug#25132).
+                   (let ((inhibit-modification-hooks nil))
+                     (erase-buffer)
+                     (insert string))
+                   (unless (eq major-mode lang-mode)
+                     (funcall lang-mode))
+                   (font-lock-ensure)
+                   ;; Collect (rel-start rel-end . face) runs.
+                   (let ((pos (point-min)) runs)
+                     (while (< pos (point-max))
+                       (let ((next (or (next-single-property-change
+                                        pos 'face nil (point-max))
+                                       (point-max)))
+                             (face (get-text-property pos 'face)))
+                         (when face
+                           (push (list (1- pos) (1- next) face) runs))
+                         (setq pos next)))
+                     (nreverse runs)))))
+            ;; Replace the flat string face with the native faces, but only
+            ;; when the language mode actually produced some -- otherwise the
+            ;; block keeps the verbatim string face.
+            (when faces
+              (with-silent-modifications
+                (put-text-property beg end 'face nil dest)
+                (pcase-dolist (`(,rs ,re ,face) faces)
+                  (put-text-property (+ beg rs) (+ beg re) 'face face dest)))))
+        (error nil)))))
+
+(defun asciidoc--fontify-code-blocks (limit)
+  "Font-lock matcher: natively fontify source blocks between point and LIMIT.
+Honors `asciidoc-fontify-code-blocks-natively' (including its size cap)
+and always returns nil, doing its work as a side effect."
+  (when (and asciidoc-fontify-code-blocks-natively
+             (treesit-parser-list nil 'asciidoc))
+    (save-match-data
+      (let ((cap (if (integerp asciidoc-fontify-code-blocks-natively)
+                     asciidoc-fontify-code-blocks-natively
+                   most-positive-fixnum))
+            (root (treesit-buffer-root-node 'asciidoc)))
+        (pcase-dolist (`(_ . ,body)
+                       (treesit-query-capture
+                        root
+                        '((listing_block_body) @b (literal_block_body) @b)
+                        (point) limit))
+          (let* ((block (treesit-node-parent body))
+                 (attr (and block (treesit-node-prev-sibling block)))
+                 (lang (and attr
+                            (equal (treesit-node-type attr) "element_attr")
+                            (asciidoc--code-block-language
+                             (or (asciidoc--element-attr-value attr) ""))))
+                 (beg (treesit-node-start body))
+                 (end (treesit-node-end body)))
+            (when (and lang (<= (- end beg) cap))
+              (asciidoc--fontify-code-block-natively lang beg end)))))))
+  nil)
+
 ;;; Imenu
 
 (defun asciidoc--imenu-name (node)
@@ -358,7 +516,11 @@ Install them with \\[asciidoc-install-grammars].
 
   ;; Added last: `font-lock-add-keywords' must run after
   ;; `treesit-major-mode-setup' or it suppresses tree-sitter fontification.
-  (font-lock-add-keywords nil asciidoc--admonition-font-lock-keywords))
+  ;; The code-block matcher runs after tree-sitter has applied the verbatim
+  ;; string face, replacing it with native faces (see
+  ;; `asciidoc--fontify-code-blocks').
+  (font-lock-add-keywords nil asciidoc--admonition-font-lock-keywords)
+  (font-lock-add-keywords nil '((asciidoc--fontify-code-blocks)) 'append))
 
 ;;; Menu
 

@@ -2,6 +2,10 @@
 
 == main (unreleased)
 
+=== New Features
+
+* Natively fontify `[source,LANG]` code blocks using the language's own major mode (like `markdown-mode`, `org-mode`, and `adoc-mode`). Configurable via `asciidoc-fontify-code-blocks-natively` (on by default, with a size cap), `asciidoc-code-lang-modes`, and `asciidoc-fontify-code-block-default-mode`.
+
 === Bug Fixes
 
 * Restrict the inline parser to inline-content ranges. Previously it parsed the whole buffer, so block markup (e.g. a `*` list marker) could throw it into an error state that suppressed inline highlighting (`code`, links, etc.) for the rest of the buffer. Inline markup inside list items, table cells, and quote blocks now fontifies reliably.
