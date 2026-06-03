@@ -78,14 +78,19 @@ blocks."
     ("bash" . sh-mode)
     ("shell" . sh-mode)
     ("elisp" . emacs-lisp-mode)
-    ("ocaml" . tuareg-mode)
+    ("ocaml" . (neocaml-mode tuareg-mode caml-mode))
     ("sqlite" . sql-mode))
   "Alist mapping AsciiDoc source languages to major modes.
 Used by native source block fontification when the major mode cannot be
 derived from the language name as LANG-mode.  The key is the language
-string as it appears in the block (e.g. the `ruby' in `[source,ruby]'),
-the value is the major mode symbol."
-  :type '(alist :key-type string :value-type function)
+string as it appears in the block (e.g. the `ruby' in `[source,ruby]').
+The value is either a single major mode or a list of candidate modes
+tried in order, the first defined one being used -- so a language can map
+to a preferred mode with fallbacks.  For example `ocaml' maps to
+`neocaml-mode', then `tuareg-mode', then `caml-mode'."
+  :type '(alist :key-type string
+                :value-type (choice (function :tag "Major mode")
+                                    (repeat (function :tag "Major mode"))))
   :package-version '(asciidoc-mode . "0.3.0"))
 
 (defcustom asciidoc-fontify-code-block-default-mode 'prog-mode
@@ -323,15 +328,18 @@ only for source blocks (a `source' or empty leading style)."
 
 (defun asciidoc--code-block-lang-mode (lang)
   "Return the major mode to fontify LANG, or nil if none is available.
-Consults `asciidoc-code-lang-modes', then LANG-mode, and honors any
+Consults `asciidoc-code-lang-modes' (whose value may be a single mode or
+a list of candidates tried in order), then LANG-mode, and honors any
 `major-mode-remap-alist' entry so tree-sitter modes are used when set."
   (let* ((down (downcase lang))
+         (norm (lambda (value) (if (listp value) value (list value))))
          (mode (seq-find
                 #'fboundp
-                (list (cdr (assoc lang asciidoc-code-lang-modes))
-                      (cdr (assoc down asciidoc-code-lang-modes))
-                      (intern (concat lang "-mode"))
-                      (intern (concat down "-mode"))))))
+                (append
+                 (funcall norm (cdr (assoc lang asciidoc-code-lang-modes)))
+                 (funcall norm (cdr (assoc down asciidoc-code-lang-modes)))
+                 (list (intern (concat lang "-mode"))
+                       (intern (concat down "-mode")))))))
     (when mode
       (if (fboundp 'major-mode-remap) (major-mode-remap mode) mode))))
 

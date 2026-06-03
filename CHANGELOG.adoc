@@ -4,7 +4,7 @@
 
 === New Features
 
-* Natively fontify `[source,LANG]` code blocks using the language's own major mode (like `markdown-mode`, `org-mode`, and `adoc-mode`). Configurable via `asciidoc-fontify-code-blocks-natively` (on by default, with a size cap), `asciidoc-code-lang-modes`, and `asciidoc-fontify-code-block-default-mode`.
+* Natively fontify `[source,LANG]` code blocks using the language's own major mode (like `markdown-mode`, `org-mode`, and `adoc-mode`). Configurable via `asciidoc-fontify-code-blocks-natively` (on by default, with a size cap), `asciidoc-code-lang-modes`, and `asciidoc-fontify-code-block-default-mode`. An `asciidoc-code-lang-modes` value may be a single mode or a list of candidate modes tried in order (e.g. `ocaml` maps to `neocaml-mode`, then `tuareg-mode`, then `caml-mode`), so a language uses the best available mode with no extra configuration.
 
 === Bug Fixes
 

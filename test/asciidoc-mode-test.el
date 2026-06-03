@@ -362,6 +362,22 @@
   (it "returns nil when there is no language"
     (expect (asciidoc--code-block-language "source") :to-be nil)))
 
+(describe "Source block language mode resolution"
+  (it "resolves a single mapped mode"
+    (let ((asciidoc-code-lang-modes '(("foo" . emacs-lisp-mode))))
+      (expect (asciidoc--code-block-lang-mode "foo") :to-equal 'emacs-lisp-mode)))
+  (it "resolves a candidate list to the first available mode"
+    (let ((asciidoc-code-lang-modes
+           '(("foo" . (asciidoc-no-such-mode emacs-lisp-mode)))))
+      (expect (asciidoc--code-block-lang-mode "foo") :to-equal 'emacs-lisp-mode)))
+  (it "falls back to LANG-mode when not in the alist"
+    (let ((asciidoc-code-lang-modes nil))
+      (expect (asciidoc--code-block-lang-mode "emacs-lisp")
+              :to-equal 'emacs-lisp-mode)))
+  (it "returns nil when no candidate is available"
+    (let ((asciidoc-code-lang-modes '(("foo" . (asciidoc-no-such-mode)))))
+      (expect (asciidoc--code-block-lang-mode "foo") :to-be nil))))
+
 (describe "Native source block fontification"
   :var (skip-reason)
   (before-all
