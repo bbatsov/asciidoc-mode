@@ -1,0 +1,166 @@
+= Showcase AsciiDoc Document
+Bozhidar Batsov <bozhidar@example.com>
+v1.0, 2026-06-03: initial revision
+:toc: left
+:sample-attr: a reusable value
+
+This fixture exercises a broad cross-section of AsciiDoc constructs.  It is
+used by the font-lock smoke test to make sure a realistic, construct-dense
+document fontifies without error, stably, and with the expected faces.
+
+A reference to an attribute: {sample-attr}.
+
+== Inline formatting
+
+Constrained: *bold*, _italic_, `monospace`, and #highlight#.
+
+Unconstrained: **b**old, __i__talic, ##mark##ed.
+
+Passthroughs are not monospace: +plain text+ and ++unconstrained++, while a
++++raw+++ and $$literal$$ pass content through.
+
+Curved quotes: "`a quotation`" and '`an aside`'.
+
+Escapes stay literal: \*not bold* and \`not code`.
+
+Replacements: (C), (R), (TM), an ellipsis ..., and arrows -> => <- <=.
+
+A forced line break here +
+continues on the next line.
+
+== Sections
+
+=== Section level two
+
+==== Section level three
+
+===== Section level four
+
+====== Section level five
+
+[#custom-id]
+== Section with an id shorthand
+
+See <<custom-id>> and <<custom-id,a caption>> and xref:other.adoc[an xref].
+
+[[block-anchor]]
+A block anchor target, referenced via <<block-anchor>>.
+
+== Lists
+
+.An unordered list
+* level one
+** level two
+*** level three
+- a dash bullet
+
+.An ordered list
+. implicit one
+. implicit two
+.. implicit nested
+
+.A checklist
+* [ ] todo item
+* [x] done item
+
+== Admonitions
+
+NOTE: This is an admonition paragraph.
+
+[WARNING]
+====
+This is an admonition block with a delimited body.
+====
+
+== Delimited blocks
+
+.A listing block
+----
+plain listing, no language
+----
+
+.A Ruby source block
+[source,ruby]
+----
+def greet(name)
+  # say hello
+  puts "Hello, world"
+end
+----
+
+.An Emacs Lisp source block
+[source,emacs-lisp]
+----
+(defun greet (name)
+  (message "Hello, %s" name))
+----
+
+.A literal block
+....
+literal text, rendered verbatim
+....
+
+.A quote block
+[quote, Anonymous]
+____
+The body of a quotation.
+____
+
+.A sidebar
+****
+An aside in a sidebar.
+****
+
+.A passthrough block
+++++
+<custom-html>passed through</custom-html>
+++++
+
+.An open block
+--
+An open block body.
+--
+
+////
+A comment block that should be ignored entirely.
+////
+
+// a single-line comment
+
+== Tables
+
+.A small table
+[cols="1,1",options="header"]
+|===
+| Name | Value
+
+| alpha
+| one
+
+| beta
+| two
+|===
+
+== Macros
+
+A link: https://example.com/page[the docs] and a bare URL
+https://example.com/raw and an email contact@example.com.
+
+An inline image image:logo.png[Logo,32,32] and a block image:
+
+image::diagram.png[Architecture diagram]
+
+A footnote.footnote:[The footnote text.] and a UI macro kbd:[C-c C-c],
+a button btn:[OK], and a menu menu:File[Save As].
+
+Math via STEM: stem:[a^2 + b^2 = c^2].
+
+A passthrough macro: pass:[<b>raw</b>].
+
+== Breaks
+
+A thematic break:
+
+'''
+
+The end.
