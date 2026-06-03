@@ -473,7 +473,11 @@ Install them with \\[asciidoc-install-grammars].
 
 \\{asciidoc-mode-map}"
   (setq-local comment-start "// ")
-  (setq-local comment-start-skip "//+\\s-*")
+  ;; AsciiDoc line comments only start at the beginning of a line, so
+  ;; anchor the skip regexp.  Otherwise the comment-aware filling sees the
+  ;; `//' in a URL like `https://...' mid-line and fills the paragraph with
+  ;; a bogus `//' prefix.
+  (setq-local comment-start-skip "^//+\\s-*")
 
   (when (asciidoc--ensure-grammars)
     ;; Create both parsers over the full buffer.

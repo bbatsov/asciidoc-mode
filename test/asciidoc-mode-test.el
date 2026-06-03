@@ -503,5 +503,17 @@
       (forward-sentence)
       (expect (looking-at "\nSecond") :to-be-truthy))))
 
+;;; Filling
+
+(describe "Filling"
+  (it "fills a paragraph containing a URL without a bogus comment prefix"
+    (with-asciidoc-buffer
+        "Visit https://example.com/a/b for more details about the project here.\n"
+      (setq-local fill-column 40)
+      (goto-char (point-min))
+      (fill-paragraph)
+      ;; The `//' inside the URL must not become a fill/comment prefix.
+      (expect (string-match-p "^[ \t]*//" (buffer-string)) :to-be nil))))
+
 (provide 'asciidoc-mode-test)
 ;;; asciidoc-mode-test.el ends here

@@ -4,6 +4,7 @@
 
 === Bug Fixes
 
+* Fix `fill-paragraph` (`M-q`) mangling paragraphs that contain a URL. The `//` in `https://` was treated as a comment start, so continuation lines were indented and prefixed with `//`. AsciiDoc line comments only start at the beginning of a line, so `comment-start-skip` is now anchored accordingly.
 * Stop the document title face from bleeding onto the header's attribute lines. The grammar nests `:name: value` attribute entries inside the `document_title` node, so the whole header (not just the title) was rendered with the title face.
 
 === New Features
