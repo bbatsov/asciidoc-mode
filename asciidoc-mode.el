@@ -352,7 +352,11 @@ faces are applied by their own rules.  Non-navigable inline macros (e.g.
      (unordered_list_marker) @font-lock-constant-face
      (checked_list_marker) @font-lock-constant-face
      (callout_list_marker) @font-lock-constant-face
-     (callout_marker) @font-lock-constant-face)
+     (callout_marker) @font-lock-constant-face
+     ;; Description list (`term:: definition'): the term is a label, the
+     ;; `::'/`:::' separator a marker like the other list markers.
+     (description_list_item (term) @font-lock-keyword-face)
+     (description_marker) @font-lock-constant-face)
 
    :language 'asciidoc
    :override t
@@ -1184,6 +1188,7 @@ Install them with \\[asciidoc-install-grammars].
                    (ordered_list_item (line) @cap)
                    (checked_list_item (line) @cap)
                    (callout_list_item (line) @cap)
+                   (description_list_item (line) @cap)
                    (quoted_block (line) @cap)
                    (table_cell (table_cell_content) @cap)
                    (csv_record (table_cell_content) @cap)

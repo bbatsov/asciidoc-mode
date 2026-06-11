@@ -400,6 +400,29 @@
       (let ((pos (string-match "_def" (buffer-string))))
         (expect (asciidoc-test-face-at (+ (point-min) pos)) :to-equal 'italic)))))
 
+;;; Font-lock: description lists
+
+(describe "Font-lock: description lists"
+  :var (skip-reason)
+  (before-all
+    (unless asciidoc-test-grammars-available
+      (setq skip-reason "tree-sitter grammars not installed")))
+
+  (it "fontifies the term and the `::' marker distinctly"
+    (assume asciidoc-test-grammars-available skip-reason)
+    (with-fontified-asciidoc-buffer "CPU:: The brain.\n"
+      (expect (asciidoc-test-face-at (point-min))
+              :to-equal 'font-lock-keyword-face)
+      (let ((marker (string-match "::" (buffer-string))))
+        (expect (asciidoc-test-face-at (1+ marker))
+                :to-equal 'font-lock-constant-face))))
+
+  (it "fontifies inline markup inside a description definition"
+    (assume asciidoc-test-grammars-available skip-reason)
+    (with-fontified-asciidoc-buffer "CPU:: The *brain* of it.\n"
+      (let ((pos (string-match "\\*brain" (buffer-string))))
+        (expect (asciidoc-test-face-at (+ (point-min) pos)) :to-equal 'bold)))))
+
 ;;; Font-lock: attributes
 
 (describe "Font-lock: attributes"
