@@ -90,7 +90,7 @@
                               asciidoc-code-face            ; `mono` / listing bodies
                               font-lock-string-face         ; literal / passthrough bodies
                               asciidoc-highlight-face       ; #highlight#
-                              font-lock-constant-face       ; list markers
+                              font-lock-constant-face       ; checkboxes / callouts
                               asciidoc-link-face            ; URL labels
                               asciidoc-url-face             ; URLs / email targets
                               asciidoc-cross-reference-face ; <<id>> cross-references
@@ -99,7 +99,7 @@
                               asciidoc-metadata-value-face  ; :attr: values
                               font-lock-keyword-face        ; admonition labels
                               font-lock-comment-face        ; // comments
-                              font-lock-delimiter-face      ; block / table delimiters
+                              asciidoc-markup-face          ; block/table delimiters, list markers
                               font-lock-preprocessor-face   ; element attributes
                               font-lock-variable-name-face  ; {attribute} references
                               font-lock-function-call-face  ; macro names

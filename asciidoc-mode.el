@@ -259,6 +259,14 @@ style (typically a yellow background)."
   "Face for overline role spans (`[.overline]#text#')."
   :group 'asciidoc)
 
+(defface asciidoc-markup-face
+  '((t :inherit shadow))
+  "Face for structural markup that should fade into the background.
+Used for block delimiters (`----', `====', ...) and list markers (`*',
+`1.', `::').  Inherits `shadow' so the prose stands out, matching
+`adoc-mode' and the convention in `markdown-mode'."
+  :group 'asciidoc)
+
 (defcustom asciidoc-superscript-raise 0.4
   "How far to raise superscript text, as a fraction of line height.
 Applied as a `display' \\='(raise ...) property on top of
@@ -386,36 +394,40 @@ faces are applied by their own rules.  Non-navigable inline macros (e.g.
    :language 'asciidoc
    :override t
    :feature 'delimiter
-   '((listing_block_start_marker) @font-lock-delimiter-face
-     (listing_block_end_marker) @font-lock-delimiter-face
-     (literal_block_marker) @font-lock-delimiter-face
-     (passthrough_block_marker) @font-lock-delimiter-face
-     (open_block_marker) @font-lock-delimiter-face
-     (quoted_block_start_marker) @font-lock-delimiter-face
-     (quoted_block_end_marker) @font-lock-delimiter-face
-     (delimited_block_start_marker) @font-lock-delimiter-face
-     (delimited_block_end_marker) @font-lock-delimiter-face)
+   '((listing_block_start_marker) @asciidoc-markup-face
+     (listing_block_end_marker) @asciidoc-markup-face
+     (literal_block_marker) @asciidoc-markup-face
+     (passthrough_block_marker) @asciidoc-markup-face
+     (open_block_marker) @asciidoc-markup-face
+     (quoted_block_start_marker) @asciidoc-markup-face
+     (quoted_block_end_marker) @asciidoc-markup-face
+     (delimited_block_start_marker) @asciidoc-markup-face
+     (delimited_block_end_marker) @asciidoc-markup-face)
 
    :language 'asciidoc
    :override t
    :feature 'table
-   '((table_block_marker) @font-lock-delimiter-face
-     (csv_table_block_marker) @font-lock-delimiter-face
-     (dsv_table_block_marker) @font-lock-delimiter-face
+   '((table_block_marker) @asciidoc-markup-face
+     (csv_table_block_marker) @asciidoc-markup-face
+     (dsv_table_block_marker) @asciidoc-markup-face
      (table_cell_attr) @font-lock-preprocessor-face)
 
    :language 'asciidoc
    :override t
    :feature 'list
-   '((ordered_list_marker) @font-lock-constant-face
-     (unordered_list_marker) @font-lock-constant-face
-     (checked_list_marker) @font-lock-constant-face
+   ;; List markers fade like other structural markup.  Tokens that carry
+   ;; meaning rather than just structure keep a distinct face: the checkbox
+   ;; state (`[x]'/`[ ]') and callout numbers (`<1>').
+   '((ordered_list_marker) @asciidoc-markup-face
+     (unordered_list_marker) @asciidoc-markup-face
+     (checked_list_marker_checked) @font-lock-constant-face
+     (checked_list_marker_unchecked) @font-lock-constant-face
      (callout_list_marker) @font-lock-constant-face
      (callout_marker) @font-lock-constant-face
      ;; Description list (`term:: definition'): the term is a label, the
      ;; `::'/`:::' separator a marker like the other list markers.
      (description_list_item (term) @font-lock-keyword-face)
-     (description_marker) @font-lock-constant-face)
+     (description_marker) @asciidoc-markup-face)
 
    :language 'asciidoc
    :override t

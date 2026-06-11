@@ -14,9 +14,10 @@
 * Highlight inline attribute references like `{name}`. The grammar doesn't recognize them, so they're fontified via a font-lock keyword; existing faces (code blocks, strings) are left untouched.
 * Underline navigable references (links, cross-references) when the mouse hovers over them, via the new `asciidoc-link-mouse-face`.
 * Highlight custom-style role spans (`[.role]#text#`). The role names get the preprocessor face (like a block `[.role]` attribute list). A known role applies its actual styling to the span text via the new `asciidoc-role-face-alist` (`underline`, `line-through`, `overline` out of the box); an unrecognized role leaves the text neutral. This mirrors `adoc-mode`.
-* Highlight description (labeled) lists (`term:: definition`). The term gets the keyword face and the `::`/`:::` marker the constant face used for other list markers; inline markup inside the definition is fontified too.
+* Highlight description (labeled) lists (`term:: definition`). The term gets the keyword face and the `::`/`:::` marker fades like the other list markers; inline markup inside the definition is fontified too.
 * Use a dedicated `asciidoc-code-face` for inline `+`code`+` and listing block bodies. It inherits `fixed-pitch`, so code renders monospaced even under a variable-pitch default, matching `adoc-mode`.
 * Render highlighted spans (`#text#`) with the new `asciidoc-highlight-face` (inheriting `highlight`, typically a yellow background) instead of the warning face, matching Asciidoctor's marked-text output and `adoc-mode`.
+* Fade structural markup into the background with the new `asciidoc-markup-face` (inheriting `shadow`): block delimiters (`----`, `====`, `\|===`, ...) and list markers (`*`, `1.`, `::`) so the prose stands out, matching `adoc-mode` and `markdown-mode`. Meaningful tokens stay distinct: checklist boxes (`[x]`/`[ ]`) and callout numbers (`<1>`) keep the constant face.
 
 == 0.3.0 (2026-06-03)
 
