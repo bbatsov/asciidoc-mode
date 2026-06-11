@@ -30,6 +30,12 @@ CONTENT is inserted and BODY is evaluated after fontification."
   "Return the face at POS in the current buffer."
   (get-text-property pos 'face))
 
+(defun asciidoc-test-face-at-includes (pos face)
+  "Return non-nil if FACE is among the face(s) applied at POS.
+Handles the `face' property being either a single face or a list."
+  (let ((f (get-text-property pos 'face)))
+    (memq face (if (listp f) f (list f)))))
+
 (defun asciidoc-test-mono-face (text needle)
   "Fontify TEXT in `asciidoc-mode' and return the face just inside NEEDLE.
 NEEDLE is a substring (e.g. a backtick-delimited code span); the face is

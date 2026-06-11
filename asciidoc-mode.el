@@ -273,6 +273,57 @@ Used for block delimiters (`----', `====', ...) and list markers (`*',
 `adoc-mode' and the convention in `markdown-mode'."
   :group 'asciidoc)
 
+;; Admonition faces.  Each paragraph admonition (`NOTE:', `TIP:', ...) gets a
+;; color-coded label and a subtle whole-block background, like Asciidoctor's
+;; rendered callouts.  Backgrounds use `:extend t' so they fill the line, and
+;; carry light/dark variants since a fixed tint can't suit both.
+
+(defface asciidoc-admonition-note-label-face
+  '((t :inherit font-lock-keyword-face :weight bold))
+  "Face for the `NOTE:' admonition label." :group 'asciidoc)
+
+(defface asciidoc-admonition-note-face
+  '((((background light)) :background "#ddeaff" :extend t)
+    (((background dark))  :background "#1b2638" :extend t))
+  "Background face for the body of a `NOTE:' admonition." :group 'asciidoc)
+
+(defface asciidoc-admonition-tip-label-face
+  '((t :inherit success :weight bold))
+  "Face for the `TIP:' admonition label." :group 'asciidoc)
+
+(defface asciidoc-admonition-tip-face
+  '((((background light)) :background "#defae4" :extend t)
+    (((background dark))  :background "#16291c" :extend t))
+  "Background face for the body of a `TIP:' admonition." :group 'asciidoc)
+
+(defface asciidoc-admonition-important-label-face
+  '((t :inherit font-lock-warning-face :weight bold))
+  "Face for the `IMPORTANT:' admonition label." :group 'asciidoc)
+
+(defface asciidoc-admonition-important-face
+  '((((background light)) :background "#f0e6ff" :extend t)
+    (((background dark))  :background "#241a33" :extend t))
+  "Background face for the body of an `IMPORTANT:' admonition."
+  :group 'asciidoc)
+
+(defface asciidoc-admonition-caution-label-face
+  '((t :inherit warning :weight bold))
+  "Face for the `CAUTION:' admonition label." :group 'asciidoc)
+
+(defface asciidoc-admonition-caution-face
+  '((((background light)) :background "#fff1e0" :extend t)
+    (((background dark))  :background "#332617" :extend t))
+  "Background face for the body of a `CAUTION:' admonition." :group 'asciidoc)
+
+(defface asciidoc-admonition-warning-label-face
+  '((t :inherit error :weight bold))
+  "Face for the `WARNING:' admonition label." :group 'asciidoc)
+
+(defface asciidoc-admonition-warning-face
+  '((((background light)) :background "#ffe5e8" :extend t)
+    (((background dark))  :background "#331a1f" :extend t))
+  "Background face for the body of a `WARNING:' admonition." :group 'asciidoc)
+
 (defcustom asciidoc-superscript-raise 0.4
   "How far to raise superscript text, as a fraction of line height.
 Applied as a `display' \\='(raise ...) property on top of
@@ -518,17 +569,93 @@ faces are applied by their own rules.  Non-navigable inline macros (e.g.
     (replacement))
   "Font-lock feature list for `asciidoc-mode'.")
 
-;;; Admonition labels
+;;; Admonitions
 
-;; The block grammar consumes a paragraph-style admonition label (e.g.
-;; \"NOTE\") without emitting a node for it, so it can't be highlighted
-;; via tree-sitter.  A small font-lock keyword fills the gap and, unlike
-;; the previous tree-sitter rule, leaves the admonition body to inline
-;; fontification instead of overriding it.
-(defvar asciidoc--admonition-font-lock-keywords
-  '(("^\\(?:NOTE\\|TIP\\|IMPORTANT\\|CAUTION\\|WARNING\\):"
-     0 'font-lock-keyword-face t))
-  "Font-lock keywords for paragraph-style admonition labels.")
+;; A paragraph admonition (`NOTE: text', possibly wrapping over several
+;; lines) is given a color-coded label and a whole-block background, like
+;; Asciidoctor's rendered callouts.  The grammar only spans the first line
+;; (and emits the label as a zero-width marker), so this is done with a
+;; font-lock matcher that finds the `admonition' node via tree-sitter --
+;; which keeps a `NOTE:'-looking line inside a code block from matching --
+;; and extends the block to the next blank line.  A
+;; `font-lock-extend-region-functions' entry re-fontifies the whole block
+;; when an edit lands on a continuation line.
+
+(defcustom asciidoc-fontify-admonition-blocks t
+  "When non-nil, tint the whole body of a paragraph admonition.
+The label is always color-coded; this controls only the background that
+spans the admonition's body lines."
+  :type 'boolean
+  :group 'asciidoc)
+
+(defconst asciidoc--admonition-label-regexp
+  "\\(\\(?:NOTE\\|TIP\\|IMPORTANT\\|CAUTION\\|WARNING\\):\\)\\(?: \\|$\\)"
+  "Regexp matching a paragraph admonition label at the start of a line.
+Group 1 is the `LABEL:' text, without the trailing space.")
+
+(defun asciidoc--admonition-kind (node)
+  "Return the kind (\"note\", \"tip\", ...) of an `admonition' NODE."
+  (let ((type (treesit-node-type (treesit-node-child node 0))))
+    (when (and type (string-prefix-p "admonition_" type))
+      (substring type (length "admonition_")))))
+
+(defun asciidoc--admonition-block-end (beg)
+  "Return the end of the admonition paragraph starting at BEG.
+That is the start of the next blank line, or end of buffer."
+  (save-excursion
+    (goto-char beg)
+    (if (re-search-forward "\n[ \t]*\n" nil t)
+        (match-beginning 0)
+      (point-max))))
+
+(defun asciidoc--admonition-label-end (beg)
+  "Return the end of the `LABEL:' starting at line position BEG, or nil."
+  (save-excursion
+    (goto-char beg)
+    (and (looking-at asciidoc--admonition-label-regexp) (match-end 1))))
+
+(defun asciidoc--fontify-admonitions (limit)
+  "Font-lock matcher: give paragraph admonitions a block look up to LIMIT.
+Returns nil and applies faces as a side effect."
+  (when (treesit-parser-list nil 'asciidoc)
+    (save-match-data
+      (let ((root (treesit-buffer-root-node 'asciidoc)))
+        (pcase-dolist (`(_ . ,node)
+                       (treesit-query-capture
+                        root '((admonition) @a) (point) limit))
+          (when-let* ((kind (asciidoc--admonition-kind node))
+                      (label-beg (save-excursion
+                                   (goto-char (treesit-node-start node))
+                                   (line-beginning-position)))
+                      (label-end (asciidoc--admonition-label-end label-beg))
+                      (block-end (asciidoc--admonition-block-end label-beg)))
+            (when asciidoc-fontify-admonition-blocks
+              (font-lock-prepend-text-property
+               label-beg block-end 'face
+               (intern (format "asciidoc-admonition-%s-face" kind))))
+            (font-lock-prepend-text-property
+             label-beg label-end 'face
+             (intern (format "asciidoc-admonition-%s-label-face" kind)))
+            (put-text-property label-beg block-end 'font-lock-multiline t))))))
+  nil)
+
+;; Bound dynamically by font-lock around `font-lock-extend-region-functions'.
+(defvar font-lock-beg)
+(defvar font-lock-end)
+
+(defun asciidoc--font-lock-extend-region ()
+  "Extend the font-lock region back to an admonition label above the region.
+For `font-lock-extend-region-functions', so editing a continuation line
+re-fontifies the whole admonition block."
+  (save-excursion
+    (goto-char font-lock-beg)
+    (let ((para-start (if (re-search-backward "\n[ \t]*\n" nil t)
+                          (match-end 0)
+                        (point-min))))
+      (when (and (< para-start font-lock-beg)
+                 (progn (goto-char para-start)
+                        (looking-at-p asciidoc--admonition-label-regexp)))
+        (setq font-lock-beg para-start)))))
 
 ;;; Native source block fontification
 
@@ -1276,6 +1403,12 @@ Install them with \\[asciidoc-install-grammars].
                 (append '(display keymap mouse-face follow-link help-echo)
                         font-lock-extra-managed-props))
 
+    ;; Admonition blocks span several lines; let font-lock re-fontify the
+    ;; whole block when an edit lands inside it.
+    (setq-local font-lock-multiline t)
+    (add-hook 'font-lock-extend-region-functions
+              #'asciidoc--font-lock-extend-region nil t)
+
     ;; Imenu
     (setq-local treesit-simple-imenu-settings
                 asciidoc--treesit-simple-imenu-settings)
@@ -1312,7 +1445,7 @@ Install them with \\[asciidoc-install-grammars].
   ;; The code-block matcher runs after tree-sitter has applied the verbatim
   ;; string face, replacing it with native faces (see
   ;; `asciidoc--fontify-code-blocks').
-  (font-lock-add-keywords nil asciidoc--admonition-font-lock-keywords)
+  (font-lock-add-keywords nil '((asciidoc--fontify-admonitions)))
   (font-lock-add-keywords nil '((asciidoc--fontify-code-blocks)) 'append))
 
 ;;; Keymap

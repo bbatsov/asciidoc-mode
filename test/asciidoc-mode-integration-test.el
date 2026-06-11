@@ -139,14 +139,16 @@ OCCURRENCE selects which match (default 1)."
   (it "fontifies the admonition label"
     (assume asciidoc-test-grammars-available skip-reason)
     (with-sample-buffer
-      ;; The whole "NOTE:" label (keyword + colon) is highlighted via a
-      ;; font-lock keyword, since the grammar doesn't expose it as a node.
+      ;; The whole "NOTE:" label (keyword + colon) gets the color-coded
+      ;; per-type label face.
       (goto-char (point-min))
       (search-forward "NOTE:")
-      (expect (get-text-property (match-beginning 0) 'face)
-              :to-equal 'font-lock-keyword-face)
-      (expect (get-text-property (+ (match-beginning 0) 4) 'face)
-              :to-equal 'font-lock-keyword-face)))
+      (expect (asciidoc-test-face-at-includes
+               (match-beginning 0) 'asciidoc-admonition-note-label-face)
+              :to-be-truthy)
+      (expect (asciidoc-test-face-at-includes
+               (+ (match-beginning 0) 4) 'asciidoc-admonition-note-label-face)
+              :to-be-truthy)))
 
   (it "fontifies block macro name"
     (assume asciidoc-test-grammars-available skip-reason)

@@ -19,6 +19,7 @@
 * Render highlighted spans (`#text#`) with the new `asciidoc-highlight-face` (inheriting `highlight`, typically a yellow background) instead of the warning face, matching Asciidoctor's marked-text output and `adoc-mode`.
 * Fade structural markup into the background with the new `asciidoc-markup-face` (inheriting `shadow`): block delimiters (`----`, `====`, `\|===`, ...) and list markers (`*`, `1.`, `::`) so the prose stands out, matching `adoc-mode` and `markdown-mode`. Meaningful tokens stay distinct: checklist boxes (`[x]`/`[ ]`) and callout numbers (`<1>`) keep the constant face.
 * Align the reference faces with `org-mode`, `markdown-mode`, and `adoc-mode`. Cross-references (`<<id>>`) now inherit `link` (they're navigable, like an internal link) instead of the constant face; anchors (`[[id]]`) recede into `shadow` with an overline instead of the loud type face; and footnote bodies recede into the comment face.
+* Render paragraph admonitions (`NOTE:`, `TIP:`, `IMPORTANT:`, `CAUTION:`, `WARNING:`) as color-coded callout blocks, like Asciidoctor's rendered output. Each type gets its own label face and a subtle whole-block background (light/dark aware) that spans the admonition's body, including lines it wraps onto. The background can be turned off with `asciidoc-fontify-admonition-blocks`. Detection is tree-sitter-driven, so a `NOTE:`-looking line inside a code block isn't mistaken for an admonition; this replaces the previous regex-only label fallback.
 
 == 0.3.0 (2026-06-03)
 

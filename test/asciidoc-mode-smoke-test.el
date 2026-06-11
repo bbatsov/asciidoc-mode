@@ -97,7 +97,8 @@
                               asciidoc-anchor-face          ; [[id]] anchors
                               asciidoc-metadata-key-face    ; :attr: names
                               asciidoc-metadata-value-face  ; :attr: values
-                              font-lock-keyword-face        ; admonition labels
+                              asciidoc-admonition-note-label-face ; NOTE: label
+                              asciidoc-admonition-note-face       ; admonition block bg
                               font-lock-comment-face        ; // comments
                               asciidoc-markup-face          ; block/table delimiters, list markers
                               font-lock-preprocessor-face   ; element attributes
