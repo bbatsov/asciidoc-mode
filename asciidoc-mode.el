@@ -384,6 +384,17 @@ faces are applied by their own rules.  Non-navigable inline macros (e.g.
      (subscript) @asciidoc--fontify-raised-span
      (passthrough) @font-lock-string-face)
 
+   ;; A custom-style span (`[.role]#text#') reuses the `highlight' node for
+   ;; its content, so the blanket rule above would render it with the
+   ;; mark/highlight face.  Override it: the role itself is markup (like a
+   ;; block `[.role]' attribute list, which uses the preprocessor face), and
+   ;; the span text carries the role's own styling, so leave it unfaced.
+   :language 'asciidoc-inline
+   :override t
+   :feature 'inline-markup
+   '((roled_text (role) @font-lock-preprocessor-face)
+     (roled_text (highlight) @default))
+
    :language 'asciidoc-inline
    :feature 'inline-link
    '((autolink) @asciidoc--fontify-reference

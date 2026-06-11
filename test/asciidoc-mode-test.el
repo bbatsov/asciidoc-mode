@@ -204,7 +204,28 @@
     (with-fontified-asciidoc-buffer "= T\n\n[[my-anchor]] target.\n"
       (let ((pos (string-match "\\[\\[my-anchor" (buffer-string))))
         (expect (asciidoc-test-face-at (+ pos 2))
-                :to-equal 'asciidoc-anchor-face)))))
+                :to-equal 'asciidoc-anchor-face))))
+
+  (it "fontifies a role name on a custom-style span"
+    (assume asciidoc-test-grammars-available skip-reason)
+    (with-fontified-asciidoc-buffer "A [.underline]#styled# word.\n"
+      (let ((role (string-match "underline" (buffer-string)))
+            (text (string-match "styled" (buffer-string))))
+        (expect (asciidoc-test-face-at (1+ role))
+                :to-equal 'font-lock-preprocessor-face)
+        ;; the span text carries the role's styling, so it stays unfaced
+        ;; instead of inheriting the highlight/mark face
+        (expect (asciidoc-test-face-at (1+ text)) :to-equal 'default))))
+
+  (it "fontifies multiple roles on an unconstrained span"
+    (assume asciidoc-test-grammars-available skip-reason)
+    (with-fontified-asciidoc-buffer "A [.big.bold]##word## here.\n"
+      (let ((big (string-match "big" (buffer-string)))
+            (bold (string-match "bold" (buffer-string))))
+        (expect (asciidoc-test-face-at (1+ big))
+                :to-equal 'font-lock-preprocessor-face)
+        (expect (asciidoc-test-face-at (1+ bold))
+                :to-equal 'font-lock-preprocessor-face)))))
 
 ;;; Font-lock: inline content inside blocks
 ;;
