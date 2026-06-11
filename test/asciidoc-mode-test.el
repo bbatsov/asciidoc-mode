@@ -524,34 +524,69 @@
     (unless asciidoc-test-grammars-available
       (setq skip-reason "tree-sitter grammars not installed")))
 
-  (it "fontifies the NOTE label as a keyword"
+  (it "color-codes the NOTE label"
     (assume asciidoc-test-grammars-available skip-reason)
-    ;; The whole "NOTE:" label is highlighted via a font-lock keyword.
     (with-fontified-asciidoc-buffer "= Title\n\nNOTE: This is a note.\n"
       (let ((pos (string-match "NOTE:" (buffer-string))))
-        ;; the keyword itself
-        (expect (asciidoc-test-face-at (1+ pos))
-                :to-equal 'font-lock-keyword-face)
-        ;; the trailing colon
-        (expect (asciidoc-test-face-at (+ 1 pos 4))
-                :to-equal 'font-lock-keyword-face))))
+        ;; the keyword and its trailing colon both get the label face
+        (expect (asciidoc-test-face-at-includes
+                 (1+ pos) 'asciidoc-admonition-note-label-face)
+                :to-be-truthy)
+        (expect (asciidoc-test-face-at-includes
+                 (+ 1 pos 4) 'asciidoc-admonition-note-label-face)
+                :to-be-truthy))))
+
+  (it "tints the whole admonition body, including continuation lines"
+    (assume asciidoc-test-grammars-available skip-reason)
+    (with-fontified-asciidoc-buffer
+        "= Title\n\nWARNING: first line\nsecond line\n\nplain paragraph.\n"
+      (let ((cont (string-match "second line" (buffer-string)))
+            (plain (string-match "plain paragraph" (buffer-string))))
+        ;; the continuation line carries the block background
+        (expect (asciidoc-test-face-at-includes
+                 (1+ cont) 'asciidoc-admonition-warning-face)
+                :to-be-truthy)
+        ;; the following plain paragraph does not
+        (expect (asciidoc-test-face-at-includes
+                 (1+ plain) 'asciidoc-admonition-warning-face)
+                :to-be nil))))
 
   (it "does not clobber inline markup in the admonition body"
     (assume asciidoc-test-grammars-available skip-reason)
-    ;; Inline `code` inside an admonition body must still be fontified as
-    ;; monospace, not overridden by the admonition label highlighting.
+    ;; Inline `code` keeps its monospace face; the block background is
+    ;; layered underneath, not in place of it.
     (with-fontified-asciidoc-buffer "= Title\n\nNOTE: see `code` here.\n"
       (let ((pos (string-match "`code`" (buffer-string))))
-        (expect (asciidoc-test-face-at (1+ pos))
-                :to-equal 'asciidoc-code-face))))
+        (expect (asciidoc-test-face-at-includes (1+ pos) 'asciidoc-code-face)
+                :to-be-truthy))))
 
-  (it "recognizes all admonition labels"
+  (it "does not treat a NOTE: line inside a listing block as an admonition"
+    (assume asciidoc-test-grammars-available skip-reason)
+    (with-fontified-asciidoc-buffer "= T\n\n----\nNOTE: just code\n----\n"
+      (let ((pos (string-match "NOTE:" (buffer-string))))
+        (expect (asciidoc-test-face-at-includes
+                 (1+ pos) 'asciidoc-admonition-note-label-face)
+                :to-be nil))))
+
+  (it "leaves the body untinted when block fontification is off"
+    (assume asciidoc-test-grammars-available skip-reason)
+    (let ((asciidoc-fontify-admonition-blocks nil))
+      (with-fontified-asciidoc-buffer "= Title\n\nNOTE: a note.\n"
+        (let ((pos (string-match "a note" (buffer-string))))
+          ;; label still color-coded, but no background on the body
+          (expect (asciidoc-test-face-at-includes
+                   (1+ pos) 'asciidoc-admonition-note-face)
+                  :to-be nil)))))
+
+  (it "recognizes all admonition labels with per-type faces"
     (assume asciidoc-test-grammars-available skip-reason)
     (dolist (label '("NOTE" "TIP" "IMPORTANT" "CAUTION" "WARNING"))
       (with-fontified-asciidoc-buffer (format "= Title\n\n%s: body.\n" label)
-        (let ((pos (string-match label (buffer-string))))
-          (expect (asciidoc-test-face-at (1+ pos))
-                  :to-equal 'font-lock-keyword-face))))))
+        (let ((pos (string-match label (buffer-string)))
+              (face (intern (format "asciidoc-admonition-%s-label-face"
+                                    (downcase label)))))
+          (expect (asciidoc-test-face-at-includes (1+ pos) face)
+                  :to-be-truthy))))))
 
 ;;; Native source block fontification
 
