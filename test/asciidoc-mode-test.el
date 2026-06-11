@@ -192,7 +192,7 @@
       (expect (asciidoc-test-face-at (+ (point-min) (string-match "a source" (buffer-string))))
               :to-equal 'asciidoc-footnote-text-face)))
 
-  (it "fontifies cross-references distinctly from links"
+  (it "fontifies cross-references with the cross-reference face"
     (assume asciidoc-test-grammars-available skip-reason)
     (with-fontified-asciidoc-buffer "= T\n\nSee <<some-id>> for details.\n"
       (let ((pos (string-match "<<some-id>>" (buffer-string))))
@@ -205,6 +205,15 @@
       (let ((pos (string-match "\\[\\[my-anchor" (buffer-string))))
         (expect (asciidoc-test-face-at (+ pos 2))
                 :to-equal 'asciidoc-anchor-face))))
+
+  (it "gives reference faces their aligned looks"
+    ;; cross-references read as links (navigable); anchors recede but stay
+    ;; findable via an overline; footnote bodies recede into the comment face
+    (expect (face-attribute 'asciidoc-cross-reference-face :inherit nil t)
+            :to-equal 'link)
+    (expect (face-attribute 'asciidoc-anchor-face :overline nil t) :to-be-truthy)
+    (expect (face-attribute 'asciidoc-footnote-text-face :inherit nil t)
+            :to-equal 'font-lock-comment-face))
 
   (it "fontifies a highlighted span with the highlight face"
     (assume asciidoc-test-grammars-available skip-reason)

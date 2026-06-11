@@ -10,7 +10,7 @@
 === New Features
 
 * Add heading commands `asciidoc-promote-heading` and `asciidoc-demote-heading` (add/remove a `=` marker), plus an org-style keymap: `M-left`/`M-right` promote/demote, `M-up`/`M-down` move a subtree, and `C-c C-n`/`C-c C-p`/`C-c C-f`/`C-c C-b`/`C-c C-u` for heading navigation. `TAB`/`S-TAB` now cycle heading visibility. Note that `M-left`/`M-right` shadow the default `left-word`/`right-word`.
-* Use dedicated, customizable faces for links (`asciidoc-link-face`), cross-references (`asciidoc-cross-reference-face`), and anchors (`asciidoc-anchor-face`) so they're visually distinct, instead of reusing generic font-lock faces.
+* Use dedicated, customizable faces for links (`asciidoc-link-face`), cross-references (`asciidoc-cross-reference-face`), and anchors (`asciidoc-anchor-face`), each independently customizable instead of reusing generic font-lock faces.
 * Highlight inline attribute references like `{name}`. The grammar doesn't recognize them, so they're fontified via a font-lock keyword; existing faces (code blocks, strings) are left untouched.
 * Underline navigable references (links, cross-references) when the mouse hovers over them, via the new `asciidoc-link-mouse-face`.
 * Highlight custom-style role spans (`[.role]#text#`). The role names get the preprocessor face (like a block `[.role]` attribute list). A known role applies its actual styling to the span text via the new `asciidoc-role-face-alist` (`underline`, `line-through`, `overline` out of the box); an unrecognized role leaves the text neutral. This mirrors `adoc-mode`.
@@ -18,6 +18,7 @@
 * Use a dedicated `asciidoc-code-face` for inline `+`code`+` and listing block bodies. It inherits `fixed-pitch`, so code renders monospaced even under a variable-pitch default, matching `adoc-mode`.
 * Render highlighted spans (`#text#`) with the new `asciidoc-highlight-face` (inheriting `highlight`, typically a yellow background) instead of the warning face, matching Asciidoctor's marked-text output and `adoc-mode`.
 * Fade structural markup into the background with the new `asciidoc-markup-face` (inheriting `shadow`): block delimiters (`----`, `====`, `\|===`, ...) and list markers (`*`, `1.`, `::`) so the prose stands out, matching `adoc-mode` and `markdown-mode`. Meaningful tokens stay distinct: checklist boxes (`[x]`/`[ ]`) and callout numbers (`<1>`) keep the constant face.
+* Align the reference faces with `org-mode`, `markdown-mode`, and `adoc-mode`. Cross-references (`<<id>>`) now inherit `link` (they're navigable, like an internal link) instead of the constant face; anchors (`[[id]]`) recede into `shadow` with an overline instead of the loud type face; and footnote bodies recede into the comment face.
 
 == 0.3.0 (2026-06-03)
 

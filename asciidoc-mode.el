@@ -185,13 +185,17 @@ Each entry has the form (LANG URL REVISION SOURCE-DIR CC C++).")
   :group 'asciidoc)
 
 (defface asciidoc-cross-reference-face
-  '((t :inherit font-lock-constant-face))
-  "Face for internal cross-references (e.g. <<id>>)."
+  '((t :inherit link))
+  "Face for internal cross-references (e.g. <<id>>).
+Inherits `link' (like the `org-mode' and `markdown-mode' link faces)
+since cross-references are navigable."
   :group 'asciidoc)
 
 (defface asciidoc-anchor-face
-  '((t :inherit font-lock-type-face))
-  "Face for anchor definitions (e.g. [[id]] and [#id])."
+  '((t :inherit shadow :overline t))
+  "Face for anchor definitions (e.g. [[id]] and [#id]).
+An anchor is a landmark rather than something you act on, so it fades
+like other markup (matching `adoc-mode'); the overline keeps it findable."
   :group 'asciidoc)
 
 (defface asciidoc-superscript-face
@@ -226,8 +230,10 @@ Link text inside `[...]' uses `asciidoc-link-face' instead."
   :group 'asciidoc)
 
 (defface asciidoc-footnote-text-face
-  '((t :inherit font-lock-doc-face))
-  "Face for footnote body text."
+  '((t :inherit font-lock-comment-face))
+  "Face for footnote body text.
+Footnote bodies are secondary text, so they recede into the comment face,
+matching `adoc-mode' and `markdown-mode'."
   :group 'asciidoc)
 
 (defface asciidoc-code-face
