@@ -4,7 +4,7 @@
 
 ;; Author: Bozhidar Batsov <bozhidar@batsov.dev>
 ;; URL: https://github.com/bbatsov/asciidoc-mode
-;; Version: 0.3.0
+;; Version: 0.4.0
 ;; Package-Requires: ((emacs "30.1"))
 ;; Keywords: text, asciidoc, languages, tree-sitter
 
@@ -109,7 +109,7 @@ language.  The default, `prog-mode', applies no highlighting."
 
 ;;; Version
 
-(defconst asciidoc-mode-version "0.3.0"
+(defconst asciidoc-mode-version "0.4.0"
   "The current version of `asciidoc-mode'.")
 
 ;;; Grammar recipes

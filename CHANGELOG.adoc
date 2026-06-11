@@ -2,6 +2,8 @@
 
 == main (unreleased)
 
+== 0.4.0 (2026-06-11)
+
 === Bug Fixes
 
 * Fix `fill-paragraph` (`M-q`) mangling paragraphs that contain a URL. The `//` in `https://` was treated as a comment start, so continuation lines were indented and prefixed with `//`. AsciiDoc line comments only start at the beginning of a line, so `comment-start-skip` is now anchored accordingly.
@@ -20,6 +22,15 @@
 * Fade structural markup into the background with the new `asciidoc-markup-face` (inheriting `shadow`): block delimiters (`----`, `====`, `\|===`, ...) and list markers (`*`, `1.`, `::`) so the prose stands out, matching `adoc-mode` and `markdown-mode`. Meaningful tokens stay distinct: checklist boxes (`[x]`/`[ ]`) and callout numbers (`<1>`) keep the constant face.
 * Align the reference faces with `org-mode`, `markdown-mode`, and `adoc-mode`. Cross-references (`<<id>>`) now inherit `link` (they're navigable, like an internal link) instead of the constant face; anchors (`[[id]]`) recede into `shadow` with an overline instead of the loud type face; and footnote bodies recede into the comment face.
 * Render paragraph admonitions (`NOTE:`, `TIP:`, `IMPORTANT:`, `CAUTION:`, `WARNING:`) as color-coded callout blocks, like Asciidoctor's rendered output. Each type gets its own label face and a subtle whole-block background (light/dark aware) that spans the admonition's body, including lines it wraps onto. The background can be turned off with `asciidoc-fontify-admonition-blocks`. Detection is tree-sitter-driven, so a `NOTE:`-looking line inside a code block isn't mistaken for an admonition; this replaces the previous regex-only label fallback.
+* Fontify superscript (`^text^`) and subscript (`~text~`): the inner text is shrunk and raised or lowered via a `display` property, tunable with `asciidoc-superscript-raise` and `asciidoc-subscript-raise`.
+* Make cross-references (`<<id>>`, `xref:`), links, and `link:`/URL macros clickable. `RET` or a `mouse-1`/`mouse-2` click follows the reference (the same action as `C-c C-o`), and references highlight on hover.
+* Add an `xref` backend over AsciiDoc anchors and section auto-ids: `M-.` jumps to a definition, `M-,` returns, and `M-?` (`xref-find-references`) lists references. Section ids are derived the way Asciidoctor does, so cross-references resolve to titled sections, not just explicit `[[id]]` anchors.
+* Complete cross-reference ids after `<<` / `xref:` via `completion-at-point`, plus attribute names inside `{`, `include::` file paths, and `[source,LANG]` language names in their respective contexts.
+* Resolve cross-file `xref:` targets, including Antora component layouts and relative file paths, so following and completion work across a multi-file document set.
+* Add an Asciidoctor-backed Flymake checker that reports the parser's errors and warnings inline. It registers automatically, so enabling `flymake-mode` is enough, and it checks unsaved buffers by feeding them to Asciidoctor over its standard input.
+* Highlight CSV (`,===`) and DSV (`:===`) tables, with inline markup fontified inside their cells.
+* Use dedicated faces for document attributes (`asciidoc-metadata-key-face` / `asciidoc-metadata-value-face`), URL and email targets (`asciidoc-url-face`), and footnotes (`asciidoc-footnote-marker-face` / `asciidoc-footnote-text-face`).
+* Integrate with `flyspell`: skip links, cross-references, anchors, and inline code so only prose is spell-checked.
 
 == 0.3.0 (2026-06-03)
 
