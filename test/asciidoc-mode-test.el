@@ -338,37 +338,61 @@
     (assume asciidoc-test-grammars-available skip-reason)
     (with-fontified-asciidoc-buffer "----\ncode\n----\n"
       (expect (asciidoc-test-face-at 1)
-              :to-equal 'font-lock-delimiter-face)))
+              :to-equal 'asciidoc-markup-face)))
 
   (it "fontifies literal block delimiters"
     (assume asciidoc-test-grammars-available skip-reason)
     (with-fontified-asciidoc-buffer "....\nlit\n....\n"
       (expect (asciidoc-test-face-at 1)
-              :to-equal 'font-lock-delimiter-face)))
+              :to-equal 'asciidoc-markup-face)))
 
   (it "fontifies passthrough block delimiters"
     (assume asciidoc-test-grammars-available skip-reason)
     (with-fontified-asciidoc-buffer "++++\npass\n++++\n"
       (expect (asciidoc-test-face-at 1)
-              :to-equal 'font-lock-delimiter-face)))
+              :to-equal 'asciidoc-markup-face)))
 
   (it "fontifies open block delimiters"
     (assume asciidoc-test-grammars-available skip-reason)
     (with-fontified-asciidoc-buffer "--\nopen\n--\n"
       (expect (asciidoc-test-face-at 1)
-              :to-equal 'font-lock-delimiter-face)))
+              :to-equal 'asciidoc-markup-face)))
 
   (it "fontifies quote block delimiters"
     (assume asciidoc-test-grammars-available skip-reason)
     (with-fontified-asciidoc-buffer "____\nquote\n____\n"
       (expect (asciidoc-test-face-at 1)
-              :to-equal 'font-lock-delimiter-face)))
+              :to-equal 'asciidoc-markup-face)))
 
   (it "fontifies example block delimiters"
     (assume asciidoc-test-grammars-available skip-reason)
     (with-fontified-asciidoc-buffer "====\nexample\n====\n"
       (expect (asciidoc-test-face-at 1)
-              :to-equal 'font-lock-delimiter-face))))
+              :to-equal 'asciidoc-markup-face))))
+
+;;; Font-lock: list markers
+
+(describe "Font-lock: list markers"
+  :var (skip-reason)
+  (before-all
+    (unless asciidoc-test-grammars-available
+      (setq skip-reason "tree-sitter grammars not installed")))
+
+  (it "fades unordered and ordered markers into the markup face"
+    (assume asciidoc-test-grammars-available skip-reason)
+    (with-fontified-asciidoc-buffer "* one\n"
+      (expect (asciidoc-test-face-at (point-min)) :to-equal 'asciidoc-markup-face))
+    (with-fontified-asciidoc-buffer ". one\n"
+      (expect (asciidoc-test-face-at (point-min)) :to-equal 'asciidoc-markup-face)))
+
+  (it "keeps the checkbox distinct while fading its bullet"
+    (assume asciidoc-test-grammars-available skip-reason)
+    (with-fontified-asciidoc-buffer "* [x] done\n"
+      ;; the `*' bullet fades, but the `[x]' checkbox stays a meaningful token
+      (expect (asciidoc-test-face-at (point-min)) :to-equal 'asciidoc-markup-face)
+      (let ((box (string-match "\\[x\\]" (buffer-string))))
+        (expect (asciidoc-test-face-at (1+ box))
+                :to-equal 'font-lock-constant-face)))))
 
 ;;; Font-lock: tables
 
@@ -382,7 +406,7 @@
     (assume asciidoc-test-grammars-available skip-reason)
     (with-fontified-asciidoc-buffer "|===\n| A | B\n|===\n"
       (expect (asciidoc-test-face-at 1)
-              :to-equal 'font-lock-delimiter-face)))
+              :to-equal 'asciidoc-markup-face)))
 
   (it "fontifies table cell format specifiers"
     (assume asciidoc-test-grammars-available skip-reason)
@@ -395,12 +419,12 @@
   (it "fontifies the CSV table fence"
     (assume asciidoc-test-grammars-available skip-reason)
     (with-fontified-asciidoc-buffer ",===\nName,Age\n,===\n"
-      (expect (asciidoc-test-face-at 1) :to-equal 'font-lock-delimiter-face)))
+      (expect (asciidoc-test-face-at 1) :to-equal 'asciidoc-markup-face)))
 
   (it "fontifies the DSV table fence"
     (assume asciidoc-test-grammars-available skip-reason)
     (with-fontified-asciidoc-buffer ":===\na:b:c\n:===\n"
-      (expect (asciidoc-test-face-at 1) :to-equal 'font-lock-delimiter-face)))
+      (expect (asciidoc-test-face-at 1) :to-equal 'asciidoc-markup-face)))
 
   (it "fontifies inline markup inside a CSV cell"
     (assume asciidoc-test-grammars-available skip-reason)
@@ -429,7 +453,7 @@
               :to-equal 'font-lock-keyword-face)
       (let ((marker (string-match "::" (buffer-string))))
         (expect (asciidoc-test-face-at (1+ marker))
-                :to-equal 'font-lock-constant-face))))
+                :to-equal 'asciidoc-markup-face))))
 
   (it "fontifies inline markup inside a description definition"
     (assume asciidoc-test-grammars-available skip-reason)

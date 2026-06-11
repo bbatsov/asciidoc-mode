@@ -128,13 +128,13 @@ OCCURRENCE selects which match (default 1)."
     (assume asciidoc-test-grammars-available skip-reason)
     (with-sample-buffer
       (expect (asciidoc-test-face-at-match ". Download")
-              :to-equal 'font-lock-constant-face)))
+              :to-equal 'asciidoc-markup-face)))
 
   (it "fontifies unordered list markers"
     (assume asciidoc-test-grammars-available skip-reason)
     (with-sample-buffer
       (expect (asciidoc-test-face-at-match "* Enable feature A")
-              :to-equal 'font-lock-constant-face)))
+              :to-equal 'asciidoc-markup-face)))
 
   (it "fontifies the admonition label"
     (assume asciidoc-test-grammars-available skip-reason)
@@ -158,7 +158,7 @@ OCCURRENCE selects which match (default 1)."
     (assume asciidoc-test-grammars-available skip-reason)
     (with-sample-buffer
       (expect (asciidoc-test-face-at-match "|===")
-              :to-equal 'font-lock-delimiter-face))))
+              :to-equal 'asciidoc-markup-face))))
 
 ;;; Block-level override
 
@@ -172,13 +172,13 @@ OCCURRENCE selects which match (default 1)."
     (assume asciidoc-test-grammars-available skip-reason)
     (with-sample-buffer
       (expect (asciidoc-test-face-at-match "* Enable feature A")
-              :to-equal 'font-lock-constant-face)))
+              :to-equal 'asciidoc-markup-face)))
 
   (it "nested list markers override spurious emphasis"
     (assume asciidoc-test-grammars-available skip-reason)
     (with-sample-buffer
       (expect (asciidoc-test-face-at-match "** Nested item")
-              :to-equal 'font-lock-constant-face)))
+              :to-equal 'asciidoc-markup-face)))
 
   (it "headings after list markers are not affected by inline misparse"
     (assume asciidoc-test-grammars-available skip-reason)
