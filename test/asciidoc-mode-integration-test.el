@@ -86,13 +86,13 @@ OCCURRENCE selects which match (default 1)."
     (assume asciidoc-test-grammars-available skip-reason)
     (with-sample-buffer
       (expect (asciidoc-test-face-at-match "`monospace`")
-              :to-equal 'font-lock-string-face)))
+              :to-equal 'asciidoc-code-face)))
 
   (it "fontifies listing block body"
     (assume asciidoc-test-grammars-available skip-reason)
     (with-sample-buffer
       (expect (asciidoc-test-face-at-match "def hello")
-              :to-equal 'font-lock-string-face)))
+              :to-equal 'asciidoc-code-face)))
 
   (it "fontifies indented literal block"
     (assume asciidoc-test-grammars-available skip-reason)
@@ -190,10 +190,10 @@ OCCURRENCE selects which match (default 1)."
   (it "listing block body overrides inline misparse"
     (assume asciidoc-test-grammars-available skip-reason)
     (with-sample-buffer
-      ;; Code inside a listing block should get string face even if
+      ;; Code inside a listing block should get the code face even if
       ;; the inline parser sees emphasis markers.
       (expect (asciidoc-test-face-at-match "def hello")
-              :to-equal 'font-lock-string-face))))
+              :to-equal 'asciidoc-code-face))))
 
 ;;; Navigation integration
 

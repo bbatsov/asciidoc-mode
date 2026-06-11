@@ -140,7 +140,7 @@
     (with-fontified-asciidoc-buffer "some `mono` text\n"
       (let ((pos (string-match "`mono" "some `mono` text")))
         (expect (asciidoc-test-face-at (+ (point-min) pos))
-                :to-equal 'font-lock-string-face))))
+                :to-equal 'asciidoc-code-face))))
 
   (it "fontifies superscript text and raises it"
     (assume asciidoc-test-grammars-available skip-reason)
@@ -206,15 +206,29 @@
         (expect (asciidoc-test-face-at (+ pos 2))
                 :to-equal 'asciidoc-anchor-face))))
 
-  (it "fontifies a role name on a custom-style span"
+  (it "fontifies a highlighted span with the highlight face"
+    (assume asciidoc-test-grammars-available skip-reason)
+    (with-fontified-asciidoc-buffer "A #marked# word.\n"
+      (let ((pos (string-match "marked" (buffer-string))))
+        (expect (asciidoc-test-face-at (1+ pos))
+                :to-equal 'asciidoc-highlight-face))))
+
+  (it "fontifies a role name and applies a known role's styling"
     (assume asciidoc-test-grammars-available skip-reason)
     (with-fontified-asciidoc-buffer "A [.underline]#styled# word.\n"
       (let ((role (string-match "underline" (buffer-string)))
             (text (string-match "styled" (buffer-string))))
         (expect (asciidoc-test-face-at (1+ role))
                 :to-equal 'font-lock-preprocessor-face)
-        ;; the span text carries the role's styling, so it stays unfaced
-        ;; instead of inheriting the highlight/mark face
+        ;; a known role (underline) styles the span text accordingly
+        (expect (asciidoc-test-face-at (1+ text))
+                :to-equal 'asciidoc-underline-face))))
+
+  (it "leaves an unknown role's span unstyled"
+    (assume asciidoc-test-grammars-available skip-reason)
+    (with-fontified-asciidoc-buffer "A [.bogus]#plain# word.\n"
+      (let ((text (string-match "plain" (buffer-string))))
+        ;; no styling face, and crucially not the highlight/mark face
         (expect (asciidoc-test-face-at (1+ text)) :to-equal 'default))))
 
   (it "fontifies multiple roles on an unconstrained span"
@@ -243,17 +257,17 @@
   (it "fontifies code inside an unordered list item"
     (assume asciidoc-test-grammars-available skip-reason)
     (expect (asciidoc-test-mono-face "* item with `code` here\n" "`code`")
-            :to-equal 'font-lock-string-face))
+            :to-equal 'asciidoc-code-face))
 
   (it "fontifies code inside a table cell"
     (assume asciidoc-test-grammars-available skip-reason)
     (expect (asciidoc-test-mono-face "|===\n| cell `code` text\n|===\n" "`code`")
-            :to-equal 'font-lock-string-face))
+            :to-equal 'asciidoc-code-face))
 
   (it "fontifies code inside a quote block"
     (assume asciidoc-test-grammars-available skip-reason)
     (expect (asciidoc-test-mono-face "____\nquoted `code` text\n____\n" "`code`")
-            :to-equal 'font-lock-string-face))
+            :to-equal 'asciidoc-code-face))
 
   (it "fontifies code after a stray list marker (no cascade)"
     (assume asciidoc-test-grammars-available skip-reason)
@@ -261,7 +275,7 @@
     ;; parser into an error state spanning the rest of the buffer.
     (expect (asciidoc-test-mono-face
              "* a lone bullet\n\nlater paragraph with `code`.\n" "`code`")
-            :to-equal 'font-lock-string-face))
+            :to-equal 'asciidoc-code-face))
 
   (it "produces no inline parse error for a mixed document"
     (assume asciidoc-test-grammars-available skip-reason)
@@ -286,7 +300,7 @@
       (goto-char (point-min))
       (forward-line 1)
       (expect (asciidoc-test-face-at (point))
-              :to-equal 'font-lock-string-face)))
+              :to-equal 'asciidoc-code-face)))
 
   (it "fontifies indented literal blocks"
     (assume asciidoc-test-grammars-available skip-reason)
@@ -481,7 +495,7 @@
     (with-fontified-asciidoc-buffer "= Title\n\nNOTE: see `code` here.\n"
       (let ((pos (string-match "`code`" (buffer-string))))
         (expect (asciidoc-test-face-at (1+ pos))
-                :to-equal 'font-lock-string-face))))
+                :to-equal 'asciidoc-code-face))))
 
   (it "recognizes all admonition labels"
     (assume asciidoc-test-grammars-available skip-reason)
@@ -541,14 +555,14 @@
         (expect (asciidoc-test-face-at (1+ pos))
                 :to-equal 'font-lock-keyword-face))))
 
-  (it "leaves the string face when fontification is disabled"
+  (it "leaves the code face when fontification is disabled"
     (assume asciidoc-test-grammars-available skip-reason)
     (let ((asciidoc-fontify-code-blocks-natively nil))
       (with-fontified-asciidoc-buffer
           "= T\n\n[source,emacs-lisp]\n----\n(defun foo () nil)\n----\n"
         (let ((pos (string-match "defun" (buffer-string))))
           (expect (asciidoc-test-face-at (1+ pos))
-                  :to-equal 'font-lock-string-face)))))
+                  :to-equal 'asciidoc-code-face)))))
 
   (it "respects the size cap"
     (assume asciidoc-test-grammars-available skip-reason)
@@ -557,32 +571,32 @@
           "= T\n\n[source,emacs-lisp]\n----\n(defun foo () nil)\n----\n"
         (let ((pos (string-match "defun" (buffer-string))))
           (expect (asciidoc-test-face-at (1+ pos))
-                  :to-equal 'font-lock-string-face)))))
+                  :to-equal 'asciidoc-code-face)))))
 
   (it "does not natively fontify a plain listing block"
     (assume asciidoc-test-grammars-available skip-reason)
     (with-fontified-asciidoc-buffer "= T\n\n----\n(defun foo () nil)\n----\n"
       (let ((pos (string-match "defun" (buffer-string))))
         (expect (asciidoc-test-face-at (1+ pos))
-                :to-equal 'font-lock-string-face))))
+                :to-equal 'asciidoc-code-face))))
 
-  (it "keeps the string face for an unknown language"
+  (it "keeps the code face for an unknown language"
     (assume asciidoc-test-grammars-available skip-reason)
     (with-fontified-asciidoc-buffer
         "= T\n\n[source,nosuchlang]\n----\nplain text\n----\n"
       (let ((pos (string-match "plain" (buffer-string))))
         (expect (asciidoc-test-face-at (1+ pos))
-                :to-equal 'font-lock-string-face))))
+                :to-equal 'asciidoc-code-face))))
 
   (it "does not recurse on a [source,asciidoc] block"
     (assume asciidoc-test-grammars-available skip-reason)
     ;; Resolving the language to `asciidoc-mode' itself must not re-enter
-    ;; native fontification; the body keeps the verbatim string face.
+    ;; native fontification; the body keeps the verbatim code face.
     (with-fontified-asciidoc-buffer
         "= T\n\n[source,asciidoc]\n----\n== Nested\n----\n"
       (let ((pos (string-match "Nested" (buffer-string))))
         (expect (asciidoc-test-face-at pos)
-                :to-equal 'font-lock-string-face)))))
+                :to-equal 'asciidoc-code-face)))))
 
 ;;; Imenu
 
