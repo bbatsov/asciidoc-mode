@@ -671,7 +671,16 @@
     (with-fontified-asciidoc-buffer "[[target]] x\n\nSee <<target>> now.\n"
       (let ((pos (+ (point-min) (string-match "<<target" (buffer-string)))))
         (expect (get-text-property pos 'keymap)
-                :to-equal asciidoc-reference-map)))))
+                :to-equal asciidoc-reference-map))))
+
+  (it "underlines reference text under the mouse pointer"
+    (assume asciidoc-test-grammars-available skip-reason)
+    (with-fontified-asciidoc-buffer "[[target]] x\n\nSee <<target>> now.\n"
+      (let ((pos (+ (point-min) (string-match "<<target" (buffer-string)))))
+        (expect (get-text-property pos 'mouse-face)
+                :to-equal 'asciidoc-link-mouse-face)
+        (expect (face-attribute 'asciidoc-link-mouse-face :underline nil t)
+                :to-be-truthy)))))
 
 ;;; Section id generation
 

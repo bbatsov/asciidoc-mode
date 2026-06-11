@@ -179,6 +179,11 @@ Each entry has the form (LANG URL REVISION SOURCE-DIR CC C++).")
   "Face for links and link text (autolinks, URL labels)."
   :group 'asciidoc)
 
+(defface asciidoc-link-mouse-face
+  '((t :inherit highlight :underline t))
+  "Face used to highlight a navigable reference under the mouse pointer."
+  :group 'asciidoc)
+
 (defface asciidoc-cross-reference-face
   '((t :inherit font-lock-constant-face))
   "Face for internal cross-references (e.g. <<id>>)."
@@ -278,7 +283,7 @@ faces are applied by their own rules.  Non-navigable inline macros (e.g.
         (add-text-properties
          beg fin
          (list 'keymap asciidoc-reference-map
-               'mouse-face 'highlight
+               'mouse-face 'asciidoc-link-mouse-face
                'follow-link t
                'help-echo "mouse-1/RET: follow reference"))))))
 
