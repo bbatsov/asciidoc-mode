@@ -87,8 +87,9 @@
                               asciidoc-title-2-face
                               bold                          ; *bold*
                               italic                        ; _italic_
-                              font-lock-string-face         ; `mono` / code bodies
-                              font-lock-warning-face        ; #highlight#
+                              asciidoc-code-face            ; `mono` / listing bodies
+                              font-lock-string-face         ; literal / passthrough bodies
+                              asciidoc-highlight-face       ; #highlight#
                               font-lock-constant-face       ; list markers
                               asciidoc-link-face            ; URL labels
                               asciidoc-url-face             ; URLs / email targets

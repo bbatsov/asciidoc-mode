@@ -230,6 +230,35 @@ Link text inside `[...]' uses `asciidoc-link-face' instead."
   "Face for footnote body text."
   :group 'asciidoc)
 
+(defface asciidoc-code-face
+  '((t :inherit (font-lock-string-face fixed-pitch)))
+  "Face for inline monospace text and listing block bodies.
+Inherits `fixed-pitch' so code renders in a monospaced font even when
+the buffer uses a variable-pitch default."
+  :group 'asciidoc)
+
+(defface asciidoc-highlight-face
+  '((t :inherit highlight))
+  "Face for highlighted/marked spans (e.g. `#text#').
+Asciidoctor renders a hash-delimited span with the default `highlight'
+style (typically a yellow background)."
+  :group 'asciidoc)
+
+(defface asciidoc-strike-through-face
+  '((t :strike-through t))
+  "Face for strike-through role spans (`[.line-through]#text#')."
+  :group 'asciidoc)
+
+(defface asciidoc-underline-face
+  '((t :underline t))
+  "Face for underline role spans (`[.underline]#text#')."
+  :group 'asciidoc)
+
+(defface asciidoc-overline-face
+  '((t :overline t))
+  "Face for overline role spans (`[.overline]#text#')."
+  :group 'asciidoc)
+
 (defcustom asciidoc-superscript-raise 0.4
   "How far to raise superscript text, as a fraction of line height.
 Applied as a `display' \\='(raise ...) property on top of
@@ -262,6 +291,36 @@ font-lock rule."
     (when (< beg fin)
       (treesit-fontify-with-override beg fin face override)
       (put-text-property beg fin 'display (list 'raise raise)))))
+
+(defcustom asciidoc-role-face-alist
+  '(("line-through" . asciidoc-strike-through-face)
+    ("underline"    . asciidoc-underline-face)
+    ("overline"     . asciidoc-overline-face))
+  "Alist mapping AsciiDoc role names to faces for custom-style spans.
+Recognised inside `[.role]#text#' (and the unconstrained `##' variant).
+A span whose role is not listed keeps the default face."
+  :type '(alist :key-type (string :tag "Role name")
+                :value-type (face :tag "Face"))
+  :group 'asciidoc)
+
+(defun asciidoc--fontify-roled-span (node override start end &rest _)
+  "Style the custom-style span NODE according to its role.
+A role listed in `asciidoc-role-face-alist' (e.g. `underline') applies its
+face to the span text.  An unrecognised role leaves the text unstyled,
+since the span reuses the `highlight' node and would otherwise inherit the
+mark face.  START, END and OVERRIDE come from the font-lock rule."
+  (let* ((parent (treesit-node-parent node))
+         (face (seq-some
+                (lambda (role)
+                  (cdr (assoc (treesit-node-text role t)
+                              asciidoc-role-face-alist)))
+                (treesit-filter-child
+                 parent
+                 (lambda (c) (equal (treesit-node-type c) "role")))))
+         (beg (max start (treesit-node-start node)))
+         (fin (min end (treesit-node-end node))))
+    (when (< beg fin)
+      (treesit-fontify-with-override beg fin (or face 'default) override))))
 
 (defvar-keymap asciidoc-reference-map
   :doc "Keymap active on the text of a navigable reference.
@@ -317,7 +376,7 @@ faces are applied by their own rules.  Non-navigable inline macros (e.g.
    :language 'asciidoc
    :override t
    :feature 'block
-   '((listing_block_body) @font-lock-string-face
+   '((listing_block_body) @asciidoc-code-face
      (literal_block_body) @font-lock-string-face
      (ident_block_line) @font-lock-string-face
      (block_title) @font-lock-type-face
@@ -382,22 +441,23 @@ faces are applied by their own rules.  Non-navigable inline macros (e.g.
    :feature 'inline-markup
    '((emphasis) @bold
      (ltalic) @italic
-     (monospace) @font-lock-string-face
-     (highlight) @font-lock-warning-face
+     (monospace) @asciidoc-code-face
+     (highlight) @asciidoc-highlight-face
      (superscript) @asciidoc--fontify-raised-span
      (subscript) @asciidoc--fontify-raised-span
      (passthrough) @font-lock-string-face)
 
    ;; A custom-style span (`[.role]#text#') reuses the `highlight' node for
-   ;; its content, so the blanket rule above would render it with the
-   ;; mark/highlight face.  Override it: the role itself is markup (like a
-   ;; block `[.role]' attribute list, which uses the preprocessor face), and
-   ;; the span text carries the role's own styling, so leave it unfaced.
+   ;; its content, so the blanket rule above would render it with the mark
+   ;; face.  Override it: the role itself is markup (like a block `[.role]'
+   ;; attribute list, which uses the preprocessor face), and the span text
+   ;; takes the role's own styling (underline, strike-through, ...) when the
+   ;; role is known, otherwise stays neutral.
    :language 'asciidoc-inline
    :override t
    :feature 'inline-markup
    '((roled_text (role) @font-lock-preprocessor-face)
-     (roled_text (highlight) @default))
+     (roled_text (highlight) @asciidoc--fontify-roled-span))
 
    :language 'asciidoc-inline
    :feature 'inline-link
