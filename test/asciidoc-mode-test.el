@@ -494,12 +494,27 @@
 
   (it "highlights inline attribute references"
     (assume asciidoc-test-grammars-available skip-reason)
-    ;; The grammar does not parse `{name}' references, so a font-lock
-    ;; keyword highlights them.
     (with-fontified-asciidoc-buffer "= T\n\nSee {version} now.\n"
       (let ((pos (string-match "{version}" (buffer-string))))
         (expect (asciidoc-test-face-at (1+ pos))
-                :to-equal 'font-lock-variable-name-face)))))
+                :to-equal 'font-lock-variable-name-face))))
+
+  (it "distinguishes intrinsic attributes from user references"
+    (assume asciidoc-test-grammars-available skip-reason)
+    ;; `{cpp}' is a built-in intrinsic, faced separately from a user `{name}'
+    (with-fontified-asciidoc-buffer "= T\n\nUse {cpp} here.\n"
+      (let ((pos (string-match "{cpp}" (buffer-string))))
+        (expect (asciidoc-test-face-at (1+ pos))
+                :to-equal 'font-lock-escape-face))))
+
+  (it "does not treat a brace group inside inline code as a reference"
+    (assume asciidoc-test-grammars-available skip-reason)
+    ;; `{x}' inside `code` stays monospace; the inline parser doesn't
+    ;; re-parse a reference there, so shell-like `${x}' is left alone
+    (with-fontified-asciidoc-buffer "= T\n\nRun `${x}` now.\n"
+      (let ((pos (string-match "{x}" (buffer-string))))
+        (expect (asciidoc-test-face-at (1+ pos))
+                :to-equal 'asciidoc-code-face)))))
 
 ;;; Font-lock: admonitions
 
