@@ -500,6 +500,7 @@ faces are applied by their own rules.  Non-navigable inline macros (e.g.
    '((id_assignment) @asciidoc-anchor-face
      (index_term) @font-lock-doc-face
      (index_term2) @font-lock-doc-face
+     (attribute_reference) @font-lock-variable-name-face
      (intrinsic_attributes_pair) @font-lock-escape-face)
 
    :language 'asciidoc-inline
@@ -528,17 +529,6 @@ faces are applied by their own rules.  Non-navigable inline macros (e.g.
   '(("^\\(?:NOTE\\|TIP\\|IMPORTANT\\|CAUTION\\|WARNING\\):"
      0 'font-lock-keyword-face t))
   "Font-lock keywords for paragraph-style admonition labels.")
-
-;;; Attribute references
-
-;; The inline grammar doesn't recognize attribute references (`{name}'
-;; expands to nothing), so highlight them with a font-lock keyword.  The
-;; nil override leaves existing faces (code blocks, strings) untouched, so
-;; e.g. a shell `${VAR}' inside a source block is not mistaken for one.
-(defvar asciidoc--attribute-reference-font-lock-keywords
-  '(("{\\(?:[a-zA-Z0-9_][a-zA-Z0-9_-]*\\)}"
-     0 'font-lock-variable-name-face nil))
-  "Font-lock keywords for inline attribute references like `{name}'.")
 
 ;;; Native source block fontification
 
@@ -1323,7 +1313,6 @@ Install them with \\[asciidoc-install-grammars].
   ;; string face, replacing it with native faces (see
   ;; `asciidoc--fontify-code-blocks').
   (font-lock-add-keywords nil asciidoc--admonition-font-lock-keywords)
-  (font-lock-add-keywords nil asciidoc--attribute-reference-font-lock-keywords)
   (font-lock-add-keywords nil '((asciidoc--fontify-code-blocks)) 'append))
 
 ;;; Keymap
