@@ -629,6 +629,12 @@ That is the start of the next blank line, or end of buffer."
 
 (defun asciidoc--admonition-label-end (beg)
   "Return the end of the `LABEL:' starting at line position BEG, or nil."
+  ;; TODO: the grammar now emits the label as a node (`admonition_note' and
+  ;; friends span the keyword word, since tree-sitter-asciidoc PR #91), so the
+  ;; label bounds could come from `(treesit-node-child node 0)' plus the `:'
+  ;; instead of this regex.  `asciidoc--admonition-label-regexp' is still needed
+  ;; by `asciidoc--font-lock-extend-region', so it can't go away entirely; the
+  ;; win would be modest.  Left as-is for now.
   (save-excursion
     (goto-char beg)
     (and (looking-at asciidoc--admonition-label-regexp) (match-end 1))))
