@@ -6,6 +6,10 @@
 
 * Highlight typographic (curved) quotes (`"\`double\`"` and `'\`single\`'`), now that the grammar parses them as a distinct node. The two-character quote markers fade into the markup face, and the quoted text stays plain prose; the inner backticks are no longer mistaken for an inline code span.
 
+=== Bug Fixes
+
+* Stop singling out a URL inside an inline macro's attribute list (e.g. the `link="..."` target of an `image:` macro). Such a URL was fontified as a standalone link -- highlighted and clickable -- only when written literally, so a literal `link=` and a `{attr}`-based one looked different. It is now left as plain attribute text in both cases.
+
 == 0.4.0 (2026-06-11)
 
 === Bug Fixes

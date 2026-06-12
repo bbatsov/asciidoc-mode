@@ -202,6 +202,16 @@
         (expect (asciidoc-test-face-at (+ (point-min) label))
                 :to-equal 'asciidoc-link-face))))
 
+  (it "leaves a URL inside a macro's attribute list as plain text"
+    (assume asciidoc-test-grammars-available skip-reason)
+    ;; The `link=' target of an `image:' macro should not be singled out as
+    ;; a standalone URL, so it matches a `{attr}'-based target.
+    (with-fontified-asciidoc-buffer
+        "image:badge.svg[Badge,link=\"https://example.com/x\"]\n"
+      (let ((pos (string-match "https" (buffer-string))))
+        (expect (asciidoc-test-face-at (+ (point-min) pos)) :to-be nil)
+        (expect (get-text-property (+ (point-min) pos) 'keymap) :to-be nil))))
+
   (it "fontifies footnote marker and text distinctly"
     (assume asciidoc-test-grammars-available skip-reason)
     (with-fontified-asciidoc-buffer "Claim footnote:[a source] here.\n"

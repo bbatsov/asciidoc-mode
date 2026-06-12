@@ -410,14 +410,35 @@ Applied as a `keymap' text property by `asciidoc--fontify-reference'."
   "RET" #'asciidoc-follow-reference-at-point
   "<mouse-2>" #'asciidoc-follow-reference-at-point)
 
+(defun asciidoc--in-inline-macro-p (node)
+  "Return non-nil if NODE is nested inside an `inline_macro'.
+A URL or label that lives in a macro's attribute list (e.g. the `link='
+target of an `image:' macro) is part of the macro, not a standalone
+reference in the prose."
+  (treesit-parent-until
+   node (lambda (n) (equal (treesit-node-type n) "inline_macro"))))
+
+(defun asciidoc--fontify-url (node override start end &rest _)
+  "Fontify a `link_url' NODE with the URL face, unless it's inside a macro.
+A URL inside an inline macro's attribute list is left as plain attribute
+text, so it isn't singled out and so literal and `{attr}'-based macro
+targets look the same.  START, END and OVERRIDE come from the rule."
+  (unless (asciidoc--in-inline-macro-p node)
+    (treesit-fontify-with-override
+     (max start (treesit-node-start node)) (min end (treesit-node-end node))
+     'asciidoc-url-face override)))
+
 (defun asciidoc--fontify-reference (node _override start end &rest _)
   "Make the navigable reference NODE clickable.
 Adds the keymap, mouse highlight and tooltip; the link/cross-reference
 faces are applied by their own rules.  Non-navigable inline macros (e.g.
-`image:', `kbd:') are skipped.  START and END bound the fontified region."
-  (when (or (member (treesit-node-type node) '("xref" "autolink"))
-            (member (asciidoc--node-field node "macro_name")
-                    '("link" "mailto" "xref")))
+`image:', `kbd:') are skipped, as is an autolink nested inside a macro's
+attribute list.  START and END bound the fontified region."
+  (when (and (not (and (equal (treesit-node-type node) "autolink")
+                       (asciidoc--in-inline-macro-p node)))
+             (or (member (treesit-node-type node) '("xref" "autolink"))
+                 (member (asciidoc--node-field node "macro_name")
+                         '("link" "mailto" "xref"))))
     (let ((beg (max start (treesit-node-start node)))
           (fin (min end (treesit-node-end node))))
       (when (< beg fin)
@@ -549,7 +570,7 @@ faces are applied by their own rules.  Non-navigable inline macros (e.g.
    :language 'asciidoc-inline
    :feature 'inline-link
    '((autolink) @asciidoc--fontify-reference
-     (link_url) @asciidoc-url-face
+     (link_url) @asciidoc--fontify-url
      (email) @asciidoc-url-face
      (xref) @asciidoc-cross-reference-face
      (xref) @asciidoc--fontify-reference
