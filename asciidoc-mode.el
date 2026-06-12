@@ -329,14 +329,16 @@ Used for block delimiters (`----', `====', ...) and list markers (`*',
 Applied as a `display' \\='(raise ...) property on top of
 `asciidoc-superscript-face'."
   :type 'number
-  :group 'asciidoc)
+  :group 'asciidoc
+  :package-version '(asciidoc-mode . "0.4.0"))
 
 (defcustom asciidoc-subscript-raise -0.25
   "How far to lower subscript text, as a fraction of line height.
 Applied as a `display' \\='(raise ...) property on top of
 `asciidoc-subscript-face'."
   :type 'number
-  :group 'asciidoc)
+  :group 'asciidoc
+  :package-version '(asciidoc-mode . "0.4.0"))
 
 ;;; Font-lock
 
@@ -366,7 +368,8 @@ Recognised inside `[.role]#text#' (and the unconstrained `##' variant).
 A span whose role is not listed keeps the default face."
   :type '(alist :key-type (string :tag "Role name")
                 :value-type (face :tag "Face"))
-  :group 'asciidoc)
+  :group 'asciidoc
+  :package-version '(asciidoc-mode . "0.4.0"))
 
 (defun asciidoc--fontify-roled-span (node override start end &rest _)
   "Style the custom-style span NODE according to its role.
@@ -586,7 +589,8 @@ faces are applied by their own rules.  Non-navigable inline macros (e.g.
 The label is always color-coded; this controls only the background that
 spans the admonition's body lines."
   :type 'boolean
-  :group 'asciidoc)
+  :group 'asciidoc
+  :package-version '(asciidoc-mode . "0.4.0"))
 
 (defconst asciidoc--admonition-label-regexp
   "\\(\\(?:NOTE\\|TIP\\|IMPORTANT\\|CAUTION\\|WARNING\\):\\)\\(?: \\|$\\)"
@@ -1240,12 +1244,14 @@ own mouse keymap would otherwise shadow `asciidoc-follow-reference-at-point'."
 (defcustom asciidoc-asciidoctor-command "asciidoctor"
   "Executable used by the Asciidoctor-backed Flymake checker."
   :type 'string
-  :group 'asciidoc)
+  :group 'asciidoc
+  :package-version '(asciidoc-mode . "0.4.0"))
 
 (defcustom asciidoc-asciidoctor-extra-args nil
   "Extra command-line arguments passed to Asciidoctor by the Flymake checker."
   :type '(repeat string)
-  :group 'asciidoc)
+  :group 'asciidoc
+  :package-version '(asciidoc-mode . "0.4.0"))
 
 (defconst asciidoc--flymake-diagnostic-re
   (concat "^asciidoctor: \\(ERROR\\|WARNING\\|DEPRECATED\\): "
