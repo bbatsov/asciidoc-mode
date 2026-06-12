@@ -142,6 +142,24 @@
         (expect (asciidoc-test-face-at (+ (point-min) pos))
                 :to-equal 'asciidoc-code-face))))
 
+  (it "fades typographic-quote delimiters and leaves the text plain"
+    (assume asciidoc-test-grammars-available skip-reason)
+    (with-fontified-asciidoc-buffer "say \"`hello`\" now\n"
+      (let ((open (string-match "\"`" (buffer-string)))
+            (text (string-match "hello" (buffer-string))))
+        ;; both characters of the opener fade into the markup face
+        (expect (asciidoc-test-face-at (1+ open)) :to-equal 'asciidoc-markup-face)
+        (expect (asciidoc-test-face-at (+ 2 open)) :to-equal 'asciidoc-markup-face)
+        ;; the quoted prose stays unfaced
+        (expect (asciidoc-test-face-at (1+ text)) :to-be nil))))
+
+  (it "fontifies single typographic quotes too"
+    (assume asciidoc-test-grammars-available skip-reason)
+    (with-fontified-asciidoc-buffer "an '`aside`' here\n"
+      (let ((open (string-match "'`" (buffer-string))))
+        (expect (asciidoc-test-face-at (1+ open))
+                :to-equal 'asciidoc-markup-face))))
+
   (it "fontifies superscript text and raises it"
     (assume asciidoc-test-grammars-available skip-reason)
     (with-fontified-asciidoc-buffer "E = mc^2^ today\n"

@@ -2,6 +2,10 @@
 
 == main (unreleased)
 
+=== New Features
+
+* Highlight typographic (curved) quotes (`"\`double\`"` and `'\`single\`'`), now that the grammar parses them as a distinct node. The two-character quote markers fade into the markup face, and the quoted text stays plain prose; the inner backticks are no longer mistaken for an inline code span.
+
 == 0.4.0 (2026-06-11)
 
 === Bug Fixes

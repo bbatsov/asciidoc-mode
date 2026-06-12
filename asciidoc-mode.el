@@ -359,6 +359,20 @@ font-lock rule."
       (treesit-fontify-with-override beg fin face override)
       (put-text-property beg fin 'display (list 'raise raise)))))
 
+(defun asciidoc--fontify-typographic-quote (node override start end &rest _)
+  "Fade the curly-quote delimiters of a `typographic_quote' NODE.
+The two-character opener and closer fade into the markup face; the quoted
+text stays plain prose, since it renders as an ordinary phrase wrapped in
+curved quotes.  START, END and OVERRIDE come from the font-lock rule."
+  (let ((beg (treesit-node-start node))
+        (fin (treesit-node-end node)))
+    (dolist (range (list (cons beg (+ beg 2)) (cons (- fin 2) fin)))
+      (let ((rb (max start (car range)))
+            (re (min end (cdr range))))
+        (when (< rb re)
+          (treesit-fontify-with-override
+           rb re 'asciidoc-markup-face override))))))
+
 (defcustom asciidoc-role-face-alist
   '(("line-through" . asciidoc-strike-through-face)
     ("underline"    . asciidoc-underline-face)
@@ -517,6 +531,7 @@ faces are applied by their own rules.  Non-navigable inline macros (e.g.
      (highlight) @asciidoc-highlight-face
      (superscript) @asciidoc--fontify-raised-span
      (subscript) @asciidoc--fontify-raised-span
+     (typographic_quote) @asciidoc--fontify-typographic-quote
      (passthrough) @font-lock-string-face)
 
    ;; A custom-style span (`[.role]#text#') reuses the `highlight' node for
