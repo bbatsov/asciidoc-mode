@@ -547,7 +547,7 @@ attribute list.  START and END bound the fontified region."
    :language 'asciidoc-inline
    :feature 'inline-markup
    '((emphasis) @bold
-     (ltalic) @italic
+     (italic) @italic
      (monospace) @asciidoc-code-face
      (highlight) @asciidoc-highlight-face
      (superscript) @asciidoc--fontify-raised-span
