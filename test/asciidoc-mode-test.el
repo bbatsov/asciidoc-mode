@@ -63,26 +63,35 @@
 
   (it "fontifies level-2 title"
     (assume asciidoc-test-grammars-available skip-reason)
-    (with-fontified-asciidoc-buffer "=== Section 2\n"
-      (expect (asciidoc-test-face-at 1)
+    (with-fontified-asciidoc-buffer "== Section 1\n\n=== Section 2\n"
+      (search-forward "=== Section 2")
+      (expect (asciidoc-test-face-at (match-beginning 0))
               :to-equal 'asciidoc-title-2-face)))
 
   (it "fontifies level-3 title"
     (assume asciidoc-test-grammars-available skip-reason)
-    (with-fontified-asciidoc-buffer "==== Section 3\n"
-      (expect (asciidoc-test-face-at 1)
+    (with-fontified-asciidoc-buffer
+        "== Section 1\n\n=== Section 2\n\n==== Section 3\n"
+      (search-forward "==== Section 3")
+      (expect (asciidoc-test-face-at (match-beginning 0))
               :to-equal 'asciidoc-title-3-face)))
 
   (it "fontifies level-4 title"
     (assume asciidoc-test-grammars-available skip-reason)
-    (with-fontified-asciidoc-buffer "===== Section 4\n"
-      (expect (asciidoc-test-face-at 1)
+    (with-fontified-asciidoc-buffer
+        (concat "== Section 1\n\n=== Section 2\n\n==== Section 3\n\n"
+                "===== Section 4\n")
+      (search-forward "===== Section 4")
+      (expect (asciidoc-test-face-at (match-beginning 0))
               :to-equal 'asciidoc-title-4-face)))
 
   (it "fontifies level-5 title"
     (assume asciidoc-test-grammars-available skip-reason)
-    (with-fontified-asciidoc-buffer "====== Section 5\n"
-      (expect (asciidoc-test-face-at 1)
+    (with-fontified-asciidoc-buffer
+        (concat "== Section 1\n\n=== Section 2\n\n==== Section 3\n\n"
+                "===== Section 4\n\n====== Section 5\n")
+      (search-forward "====== Section 5")
+      (expect (asciidoc-test-face-at (match-beginning 0))
               :to-equal 'asciidoc-title-5-face)))
 
   (it "does not bleed the title face onto header attribute lines"
