@@ -743,12 +743,10 @@ a list of candidates tried in order), then LANG-mode, and honors any
       (if (fboundp 'major-mode-remap) (major-mode-remap mode) mode))))
 
 (defun asciidoc--element-attr-value (attr-node)
-  "Return the text of ATTR-NODE's `attr_value' child, or nil."
-  (when-let* ((value (car (treesit-filter-child
-                           attr-node
-                           (lambda (n)
-                             (equal (treesit-node-type n) "attr_value"))))))
-    (treesit-node-text value t)))
+  "Return ATTR-NODE's attribute list without its brackets."
+  (string-remove-suffix
+   "]"
+   (string-remove-prefix "[" (string-trim (treesit-node-text attr-node t)))))
 
 (defun asciidoc--fontify-code-block-natively (lang beg end)
   "Fontify the source block body between BEG and END using LANG's mode.
