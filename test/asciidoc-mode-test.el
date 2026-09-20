@@ -14,6 +14,27 @@
        (treesit-language-available-p 'asciidoc-inline))
   "Non-nil if both AsciiDoc tree-sitter grammars are installed.")
 
+;;; Font-lock query validation
+
+(describe "Font-lock: query validation"
+  (it "validates every query against its grammar"
+    (assume asciidoc-test-grammars-available
+            "tree-sitter grammars not installed")
+    (expect asciidoc--font-lock-settings :not :to-be nil)
+    (dolist (setting asciidoc--font-lock-settings)
+      (let* ((query (car setting))
+             (language (treesit-query-language query))
+             (feature (nth 2 setting)))
+        ;; Query directly so Emacs cannot skip disabled font-lock rules.
+        (with-temp-buffer
+          (let ((parser (treesit-parser-create language)))
+            (condition-case err
+                (treesit-query-capture (treesit-parser-root-node parser) query)
+              (treesit-query-error
+               (buttercup-fail "Invalid %s query for %s: %s"
+                              feature language
+                              (error-message-string err))))))))))
+
 ;;; Mode activation
 
 (describe "Mode activation"
