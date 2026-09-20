@@ -618,6 +618,19 @@
 
 ;;; Native source block fontification
 
+(describe "Block attribute extraction"
+  (it "preserves attribute text without brackets or the trailing newline"
+    (assume asciidoc-test-grammars-available
+            "tree-sitter grammars not installed")
+    (dolist (value '("source,emacs-lisp" ",emacs-lisp"
+                     "source%nowrap,python" "source,ruby,subs=\"verbatim,quotes\""))
+      (with-asciidoc-buffer (format "[%s]\n----\ncode\n----\n" value)
+        (let ((attr (cdar (treesit-query-capture
+                          (treesit-buffer-root-node 'asciidoc)
+                          '((element_attr) @attr)))))
+          (expect attr :not :to-be nil)
+          (expect (asciidoc--element-attr-value attr) :to-equal value))))))
+
 (describe "Source block language extraction"
   (it "extracts the language from a source block attribute list"
     (expect (asciidoc--code-block-language "source,ruby") :to-equal "ruby"))
