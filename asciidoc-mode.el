@@ -125,13 +125,16 @@ language.  The default, `prog-mode', applies no highlighting."
 Each entry has the form (LANG URL REVISION SOURCE-DIR CC C++).")
 
 ;;;###autoload
-(defun asciidoc-install-grammars ()
-  "Install the tree-sitter grammars needed by `asciidoc-mode'."
-  (interactive)
+(defun asciidoc-install-grammars (&optional force)
+  "Install the tree-sitter grammars needed by `asciidoc-mode'.
+Grammars that are already installed are left alone, unless FORCE is
+non-nil (interactively, with a prefix argument), which reinstalls them
+from `asciidoc-grammar-recipes'."
+  (interactive "P")
   (let ((treesit-language-source-alist asciidoc-grammar-recipes))
     (dolist (recipe asciidoc-grammar-recipes)
       (let ((lang (car recipe)))
-        (unless (treesit-language-available-p lang)
+        (when (or force (not (treesit-language-available-p lang)))
           (message "Installing tree-sitter grammar for %s..." lang)
           (treesit-install-language-grammar lang)
           (message "Installing tree-sitter grammar for %s...done" lang))))))
