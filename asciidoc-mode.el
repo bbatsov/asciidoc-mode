@@ -26,7 +26,7 @@
 ;; A tree-sitter-based major mode for editing AsciiDoc files.
 ;;
 ;; This mode uses two tree-sitter parsers from
-;; <https://github.com/cathaysia/tree-sitter-asciidoc>:
+;; <https://github.com/bovinemagnet/tree-sitter-asciidoc>:
 ;;
 ;; - `asciidoc' for block-level structure (sections, lists, blocks)
 ;; - `asciidoc-inline' for inline formatting (bold, italic, links)
@@ -116,11 +116,11 @@ language.  The default, `prog-mode', applies no highlighting."
 
 (defvar asciidoc-grammar-recipes
   '((asciidoc
-     "https://github.com/cathaysia/tree-sitter-asciidoc"
-     nil "tree-sitter-asciidoc/src")
+     "https://github.com/bovinemagnet/tree-sitter-asciidoc"
+     "v0.11.0" "tree-sitter-asciidoc/src")
     (asciidoc-inline
-     "https://github.com/cathaysia/tree-sitter-asciidoc"
-     nil "tree-sitter-asciidoc_inline/src"))
+     "https://github.com/bovinemagnet/tree-sitter-asciidoc"
+     "v0.11.0" "tree-sitter-asciidoc_inline/src"))
   "Tree-sitter grammar recipes for AsciiDoc.
 Each entry has the form (LANG URL REVISION SOURCE-DIR CC C++).")
 
@@ -1419,14 +1419,18 @@ Install them with \\[asciidoc-install-grammars].
     ;; emphasis and can produce an error spanning the rest of the buffer,
     ;; which suppresses inline fontification.  Embedding it into the block
     ;; parser via `treesit-range-rules' scopes it to the relevant text.
-    ;; The `line' / `table_cell_content' children are captured rather than
-    ;; their containers so block markers (`*', `.', `=') stay out of the
-    ;; inline ranges.
+    ;; For lists, admonitions and quotes the `line' children are captured
+    ;; rather than their containers so block markers (`*', `.') stay out of
+    ;; the inline ranges.  Paragraphs, table cells and CSV/DSV records are
+    ;; captured whole instead: the inline parser reads all the ranges as one
+    ;; contiguous text, and their content nodes leave out the newline or
+    ;; cell separator, so `foo' followed by a `*bold*' on the next line or
+    ;; in the next cell would reach it as the single word `foo*bold*'.
     (setq-local treesit-range-settings
                 (treesit-range-rules
                  :embed 'asciidoc-inline
                  :host 'asciidoc
-                 '((paragraph (line) @cap)
+                 '((paragraph) @cap
                    (admonition (line) @cap)
                    (unordered_list_item (line) @cap)
                    (ordered_list_item (line) @cap)
@@ -1434,9 +1438,9 @@ Install them with \\[asciidoc-install-grammars].
                    (callout_list_item (line) @cap)
                    (description_list_item (line) @cap)
                    (quoted_block (line) @cap)
-                   (table_cell (table_cell_content) @cap)
-                   (csv_record (table_cell_content) @cap)
-                   (dsv_record (table_cell_content) @cap))))
+                   (table_cell) @cap
+                   (csv_record) @cap
+                   (dsv_record) @cap)))
     (setq-local treesit-language-at-point-function
                 (lambda (_pos) 'asciidoc))
 
