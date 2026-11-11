@@ -1,6 +1,6 @@
 = asciidoc-mode
 :url-repo: https://github.com/bbatsov/asciidoc-mode
-:url-grammar: https://github.com/cathaysia/tree-sitter-asciidoc
+:url-grammar: https://github.com/bovinemagnet/tree-sitter-asciidoc
 
 image:https://melpa.org/packages/asciidoc-mode-badge.svg[MELPA,link="https://melpa.org/#/asciidoc-mode"]
 image:https://stable.melpa.org/packages/asciidoc-mode-badge.svg[MELPA Stable,link="https://stable.melpa.org/#/asciidoc-mode"]
@@ -104,7 +104,7 @@ I named it `asciidoc-mode` instead of `adoc-ts-mode` because it shares nothing w
 == Requirements
 
 * Emacs 30.1 or later (built with tree-sitter support)
-* Two tree-sitter grammars from {url-grammar}[cathaysia/tree-sitter-asciidoc]:
+* Two tree-sitter grammars from {url-grammar}[bovinemagnet/tree-sitter-asciidoc]:
 ** `asciidoc` (block-level structure)
 ** `asciidoc_inline` (inline formatting)
 
@@ -120,6 +120,8 @@ M-x asciidoc-install-grammars
 ----
 
 This downloads and compiles both grammars automatically. You only need to do this once.
+
+The grammars are pinned to a release of {url-grammar}[bovinemagnet/tree-sitter-asciidoc], the maintained fork of the original (now archived) `cathaysia/tree-sitter-asciidoc`. If you installed them before the switch, run `C-u M-x asciidoc-install-grammars` to replace them.
 
 === Package Installation
 
@@ -185,7 +187,7 @@ Prefer https://www.flycheck.org[Flycheck]? It already bundles built-in `asciidoc
 
 == Design
 
-`asciidoc-mode` uses two tree-sitter parsers from {url-grammar}[cathaysia/tree-sitter-asciidoc], each covering the full buffer independently:
+`asciidoc-mode` uses two tree-sitter parsers from {url-grammar}[bovinemagnet/tree-sitter-asciidoc], each covering the full buffer independently:
 
 - `asciidoc` -- block-level structure (headings, paragraphs, lists, code blocks, admonitions, attributes, comments, etc.)
 - `asciidoc-inline` -- inline formatting (bold, italic, monospace, links, cross-references, footnotes, macros, replacements, etc.)

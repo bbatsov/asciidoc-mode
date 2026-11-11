@@ -321,6 +321,18 @@
     (unless asciidoc-test-grammars-available
       (setq skip-reason "tree-sitter grammars not installed")))
 
+  (it "fontifies markup at the start of a line that follows another line"
+    (assume asciidoc-test-grammars-available skip-reason)
+    (with-fontified-asciidoc-buffer "First line\n*bold* here\n"
+      (let ((pos (string-match "\\*bold" (buffer-string))))
+        (expect (asciidoc-test-face-at (+ (point-min) pos)) :to-equal 'bold))))
+
+  (it "fontifies a span that runs over two lines of a paragraph"
+    (assume asciidoc-test-grammars-available skip-reason)
+    (with-fontified-asciidoc-buffer "Some *bold\ntext* here\n"
+      (let ((pos (string-match "text\\*" (buffer-string))))
+        (expect (asciidoc-test-face-at (+ (point-min) pos)) :to-equal 'bold))))
+
   (it "fontifies code inside an unordered list item"
     (assume asciidoc-test-grammars-available skip-reason)
     (expect (asciidoc-test-mono-face "* item with `code` here\n" "`code`")
@@ -492,6 +504,12 @@
     (assume asciidoc-test-grammars-available skip-reason)
     (with-fontified-asciidoc-buffer ":===\na:b:c\n:===\n"
       (expect (asciidoc-test-face-at 1) :to-equal 'asciidoc-markup-face)))
+
+  (it "fontifies inline markup in a cell that directly follows another"
+    (assume asciidoc-test-grammars-available skip-reason)
+    (with-fontified-asciidoc-buffer "|===\n|foo|*bold*\n|===\n"
+      (let ((pos (string-match "\\*bold" (buffer-string))))
+        (expect (asciidoc-test-face-at (+ (point-min) pos)) :to-equal 'bold))))
 
   (it "fontifies inline markup inside a CSV cell"
     (assume asciidoc-test-grammars-available skip-reason)

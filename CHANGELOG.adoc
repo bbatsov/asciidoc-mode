@@ -2,6 +2,10 @@
 
 == main (unreleased)
 
+=== Changes
+
+* https://github.com/bbatsov/asciidoc-mode/pull/22[#22]: Switch to the https://github.com/bovinemagnet/tree-sitter-asciidoc[bovinemagnet/tree-sitter-asciidoc] grammars (pinned to v0.11.0), as `cathaysia/tree-sitter-asciidoc` has been archived. Bold, italic and other constrained spans can now run over several lines of a paragraph. Run `C-u M-x asciidoc-install-grammars` to replace grammars you already have installed.
+
 === New Features
 
 * Highlight typographic (curved) quotes (`"\`double\`"` and `'\`single\`'`), now that the grammar parses them as a distinct node. The two-character quote markers fade into the markup face, and the quoted text stays plain prose; the inner backticks are no longer mistaken for an inline code span.
