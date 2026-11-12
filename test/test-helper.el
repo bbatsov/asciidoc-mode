@@ -45,14 +45,25 @@ CONTENT is inserted and BODY is evaluated after fontification."
      ,@body))
 
 (defun asciidoc-test-face-at (pos)
-  "Return the face at POS in the current buffer."
-  (get-text-property pos 'face))
+  "Return the face at POS in the current buffer.
+A list holding a single face is returned as that face: rules that append
+their face leave such a list behind, and it means the same thing."
+  (let ((face (get-text-property pos 'face)))
+    (if (and (consp face) (null (cdr face))) (car face) face)))
 
 (defun asciidoc-test-face-at-includes (pos face)
   "Return non-nil if FACE is among the face(s) applied at POS.
 Handles the `face' property being either a single face or a list."
   (let ((f (get-text-property pos 'face)))
     (memq face (if (listp f) f (list f)))))
+
+(defun asciidoc-test-faces-in (needle)
+  "Return the list of faces at the start of NEEDLE in the current buffer."
+  (save-excursion
+    (goto-char (point-min))
+    (search-forward needle)
+    (let ((face (get-text-property (match-beginning 0) 'face)))
+      (if (listp face) face (list face)))))
 
 (defun asciidoc-test-mono-face (text needle)
   "Fontify TEXT in `asciidoc-mode' and return the face just inside NEEDLE.

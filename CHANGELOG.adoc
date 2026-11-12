@@ -9,6 +9,8 @@
 === New Features
 
 * Highlight typographic (curved) quotes (`"\`double\`"` and `'\`single\`'`), now that the grammar parses them as a distinct node. The two-character quote markers fade into the markup face, and the quoted text stays plain prose; the inner backticks are no longer mistaken for an inline code span.
+* https://github.com/bbatsov/asciidoc-mode/pull/23[#23]: Highlight inline markup inside section titles, the document title, block titles, document attribute values and Markdown-style quotes. It used to be hidden behind the title's (or value's) own face. A URL in an attribute value is now a followable link, like anywhere else.
+* https://github.com/bbatsov/asciidoc-mode/pull/23[#23]: Give table header rows their own face, `asciidoc-table-header-face`.
 
 === Bug Fixes
 

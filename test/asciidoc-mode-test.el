@@ -115,6 +115,110 @@
         (expect (asciidoc-test-face-at (1+ pos))
                 :not :to-equal 'asciidoc-document-title-face)))))
 
+;;; Font-lock: inline content inside titles
+
+(describe "Font-lock: inline content inside titles"
+  (it "keeps inline markup inside a section title"
+    (asciidoc-test-assume-grammars)
+    (with-fontified-asciidoc-buffer "== Using *bold* and `code`\n"
+      (expect (asciidoc-test-faces-in "bold")
+              :to-equal '(bold asciidoc-title-1-face))
+      (expect (asciidoc-test-faces-in "code")
+              :to-equal '(asciidoc-code-face asciidoc-title-1-face))))
+
+  (it "keeps inline markup inside the document title"
+    (asciidoc-test-assume-grammars)
+    (with-fontified-asciidoc-buffer "= The _big_ guide\n"
+      (expect (asciidoc-test-faces-in "big")
+              :to-equal '(italic asciidoc-document-title-face))))
+
+  (it "keeps inline markup inside a block title"
+    (asciidoc-test-assume-grammars)
+    (with-fontified-asciidoc-buffer ".A _fancy_ title\n----\ncode\n----\n"
+      (expect (asciidoc-test-faces-in "fancy")
+              :to-equal '(italic font-lock-type-face))))
+
+  (it "highlights an attribute reference inside an attribute value"
+    (asciidoc-test-assume-grammars)
+    (with-fontified-asciidoc-buffer "= T\n:base: x\n:full: {base}/a\n\ntext\n"
+      (expect (asciidoc-test-faces-in "{base}")
+              :to-equal '(font-lock-variable-name-face
+                          asciidoc-metadata-value-face))))
+
+  (it "keeps inline markup inside a Markdown-style quote"
+    (asciidoc-test-assume-grammars)
+    (with-fontified-asciidoc-buffer "> one\n> *bold* two\n"
+      (expect (asciidoc-test-faces-in "bold")
+              :to-equal '(bold font-lock-doc-face))))
+
+  (it "does not let a title swallow markup at the start of the next line"
+    (asciidoc-test-assume-grammars)
+    (with-fontified-asciidoc-buffer "== One\n*bold* para\n"
+      (expect (asciidoc-test-faces-in "bold") :to-equal '(bold)))))
+
+;;; Font-lock: after edits
+
+;; Everything above fontifies a finished buffer.  These edit one that is
+;; already fontified, which is what exercises the inline parser's ranges
+;; being recomputed as the block structure changes.
+
+(describe "Font-lock: after edits"
+  (it "fontifies markup typed on a new line of a paragraph"
+    (asciidoc-test-assume-grammars)
+    (with-fontified-asciidoc-buffer "First line\n"
+      (goto-char (point-max))
+      (insert "*bold* here\n")
+      (font-lock-ensure)
+      (expect (asciidoc-test-faces-in "bold") :to-equal '(bold))))
+
+  (it "drops the face once a span loses its closing delimiter"
+    (asciidoc-test-assume-grammars)
+    (with-fontified-asciidoc-buffer "Some *bold* text\n"
+      (goto-char (point-min))
+      (search-forward "bold*")
+      (delete-char -1)
+      (font-lock-ensure)
+      (expect (asciidoc-test-faces-in "bold") :to-be nil)))
+
+  (it "fontifies markup in a paragraph that becomes a list item"
+    (asciidoc-test-assume-grammars)
+    (with-fontified-asciidoc-buffer "intro\n\nan `item` here\n"
+      (goto-char (point-min))
+      (search-forward "an ")
+      (goto-char (match-beginning 0))
+      (insert "* ")
+      (font-lock-ensure)
+      (expect (asciidoc-test-faces-in "item") :to-equal '(asciidoc-code-face))
+      (expect (asciidoc-test-faces-in "* an") :to-equal '(asciidoc-markup-face))))
+
+  (it "fontifies a paragraph that becomes a title"
+    (asciidoc-test-assume-grammars)
+    (with-fontified-asciidoc-buffer "A *bold* line\n"
+      (goto-char (point-min))
+      (insert "== ")
+      (font-lock-ensure)
+      (expect (asciidoc-test-faces-in "bold")
+              :to-equal '(bold asciidoc-title-1-face))
+      (expect (asciidoc-test-faces-in "line")
+              :to-equal '(asciidoc-title-1-face))))
+
+  (it "keeps later markup fontified when a block is inserted above it"
+    (asciidoc-test-assume-grammars)
+    (with-fontified-asciidoc-buffer "intro\n\nSome *bold* text\n"
+      (goto-char (point-min))
+      (insert "* a\n* b\n\n----\n== x\n----\n\n")
+      (font-lock-ensure)
+      (expect (asciidoc-test-faces-in "bold") :to-equal '(bold))))
+
+  (it "fontifies markup in a cell added to a table"
+    (asciidoc-test-assume-grammars)
+    (with-fontified-asciidoc-buffer "|===\n|a |b\n\n|c |d\n|===\n"
+      (goto-char (point-min))
+      (search-forward "|d")
+      (insert "\n|e|*bold*")
+      (font-lock-ensure)
+      (expect (asciidoc-test-faces-in "bold") :to-equal '(bold)))))
+
 ;;; Font-lock: comments
 
 (describe "Font-lock: comments"
@@ -474,7 +578,16 @@
     (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer ":===\nTerm:_def_\n:===\n"
       (let ((pos (string-match "_def" (buffer-string))))
-        (expect (asciidoc-test-face-at (+ (point-min) pos)) :to-equal 'italic)))))
+        (expect (asciidoc-test-face-at (+ (point-min) pos)) :to-equal 'italic))))
+
+  (it "fontifies the header row"
+    (asciidoc-test-assume-grammars)
+    (with-fontified-asciidoc-buffer "|===\n|Name |*Note*\n\n|foo |bar\n|===\n"
+      (expect (asciidoc-test-faces-in "Name")
+              :to-equal '(asciidoc-table-header-face))
+      (expect (asciidoc-test-faces-in "Note")
+              :to-equal '(bold asciidoc-table-header-face))
+      (expect (asciidoc-test-faces-in "foo") :to-be nil))))
 
 ;;; Font-lock: description lists
 
