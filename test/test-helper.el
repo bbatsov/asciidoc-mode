@@ -17,7 +17,7 @@
 
 ;; CI sets this so a broken grammar install fails the run instead of
 ;; quietly skipping most of the suite.
-(when (and (getenv "ASCIIDOC_MODE_REQUIRE_GRAMMARS")
+(when (and (not (member (getenv "ASCIIDOC_MODE_REQUIRE_GRAMMARS") '(nil "" "0")))
            (not asciidoc-test-grammars-available))
   (error "The AsciiDoc tree-sitter grammars are required but not installed"))
 
