@@ -16,23 +16,12 @@
 (require 'cl-lib)
 (require 'test-helper)
 
-(defvar asciidoc-test-grammars-available
-  (and (treesit-available-p)
-       (treesit-language-available-p 'asciidoc)
-       (treesit-language-available-p 'asciidoc-inline))
-  "Non-nil if both AsciiDoc tree-sitter grammars are installed.")
-
 (defvar asciidoc-test-showcase-file
   (expand-file-name "fixtures/showcase.adoc"
                     (file-name-directory (or load-file-name buffer-file-name)))
   "Path to the construct-dense showcase fixture.")
 
 (describe "Font-lock smoke test"
-  :var (skip-reason)
-  (before-all
-    (unless asciidoc-test-grammars-available
-      (setq skip-reason "tree-sitter grammars not installed")))
-
   (defun asciidoc-test--showcase-buffer ()
     "Return a fontified `asciidoc-mode' buffer with the showcase document."
     (let ((buf (generate-new-buffer " *asciidoc-showcase*")))
@@ -43,7 +32,7 @@
       buf))
 
   (it "fontifies the whole showcase document without error"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (let ((buf (asciidoc-test--showcase-buffer)))
       (unwind-protect
           (with-current-buffer buf
@@ -53,7 +42,7 @@
         (kill-buffer buf))))
 
   (it "produces a stable (idempotent) fontification"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (let ((buf (asciidoc-test--showcase-buffer)))
       (unwind-protect
           (with-current-buffer buf
@@ -70,7 +59,7 @@
         (kill-buffer buf))))
 
   (it "applies the expected faces across the document"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (let ((buf (asciidoc-test--showcase-buffer)))
       (unwind-protect
           (with-current-buffer buf
@@ -111,7 +100,7 @@
         (kill-buffer buf))))
 
   (it "fontifies a source block with its language major mode"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (let ((buf (asciidoc-test--showcase-buffer)))
       (unwind-protect
           (with-current-buffer buf
