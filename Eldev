@@ -1,3 +1,5 @@
+; -*- mode: emacs-lisp; lexical-binding: t; -*-
+
 (eldev-require-version "1.2")
 
 (eldev-use-package-archive 'melpa)
@@ -13,5 +15,3 @@
 
 ;; Linting
 (setf eldev-lint-default '(elisp))
-(with-eval-after-load 'elisp-lint
-  (setf elisp-lint-ignored-validators '("package-lint")))
