@@ -8,12 +8,6 @@
 
 (require 'test-helper)
 
-(defvar asciidoc-test-grammars-available
-  (and (treesit-available-p)
-       (treesit-language-available-p 'asciidoc)
-       (treesit-language-available-p 'asciidoc-inline))
-  "Non-nil if both AsciiDoc tree-sitter grammars are installed.")
-
 (defvar asciidoc-integration-test-file
   (expand-file-name "fixtures/sample.adoc"
                      (file-name-directory (or load-file-name
@@ -41,103 +35,98 @@ OCCURRENCE selects which match (default 1)."
 ;;; Font-lock integration
 
 (describe "Integration: font-lock"
-  :var (skip-reason)
-  (before-all
-    (unless asciidoc-test-grammars-available
-      (setq skip-reason "tree-sitter grammars not installed")))
-
   (it "fontifies document title"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-sample-buffer
       (expect (asciidoc-test-face-at-match "= Sample Document")
               :to-equal 'asciidoc-document-title-face)))
 
   (it "fontifies level-1 headings"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-sample-buffer
       (expect (asciidoc-test-face-at-match "== Getting Started")
               :to-equal 'asciidoc-title-1-face)))
 
   (it "fontifies level-2 headings"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-sample-buffer
       (expect (asciidoc-test-face-at-match "=== Installation")
               :to-equal 'asciidoc-title-2-face)))
 
   (it "fontifies level-3 headings"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-sample-buffer
       (expect (asciidoc-test-face-at-match "==== Advanced Options")
               :to-equal 'asciidoc-title-3-face)))
 
   (it "fontifies bold text"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-sample-buffer
       (expect (asciidoc-test-face-at-match "*bold*")
               :to-equal 'bold)))
 
   (it "fontifies italic text"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-sample-buffer
       (expect (asciidoc-test-face-at-match "_italic_")
               :to-equal 'italic)))
 
   (it "fontifies monospace text"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-sample-buffer
       (expect (asciidoc-test-face-at-match "`monospace`")
               :to-equal 'asciidoc-code-face)))
 
   (it "fontifies listing block body"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-sample-buffer
       (expect (asciidoc-test-face-at-match "def hello")
               :to-equal 'asciidoc-code-face)))
 
   (it "fontifies indented literal block"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-sample-buffer
       (expect (asciidoc-test-face-at-match "  $ make install")
               :to-equal 'font-lock-string-face)))
 
   (it "fontifies line comments"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-sample-buffer
       (expect (asciidoc-test-face-at-match "// This is a line comment")
               :to-equal 'font-lock-comment-face)))
 
   (it "fontifies thematic breaks"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-sample-buffer
       (expect (asciidoc-test-face-at-match "'''")
               :to-equal 'font-lock-comment-delimiter-face)))
 
   (it "fontifies markdown-style quote blocks"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-sample-buffer
       (expect (asciidoc-test-face-at-match "> This is a markdown")
               :to-equal 'font-lock-doc-face)))
 
   (it "fontifies block titles"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-sample-buffer
       (expect (asciidoc-test-face-at-match ".A block title")
               :to-equal 'font-lock-type-face)))
 
   (it "fontifies ordered list markers"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-sample-buffer
       (expect (asciidoc-test-face-at-match ". Download")
               :to-equal 'asciidoc-markup-face)))
 
   (it "fontifies unordered list markers"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-sample-buffer
       (expect (asciidoc-test-face-at-match "* Enable feature A")
               :to-equal 'asciidoc-markup-face)))
 
   (it "fontifies the admonition label"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-sample-buffer
       ;; The whole "NOTE:" label (keyword + colon) gets the color-coded
       ;; per-type label face.
@@ -151,13 +140,13 @@ OCCURRENCE selects which match (default 1)."
               :to-be-truthy)))
 
   (it "fontifies block macro name"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-sample-buffer
       (expect (asciidoc-test-face-at-match "toc::")
               :to-equal 'font-lock-function-call-face)))
 
   (it "fontifies table delimiters"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-sample-buffer
       (expect (asciidoc-test-face-at-match "|===")
               :to-equal 'asciidoc-markup-face))))
@@ -165,32 +154,27 @@ OCCURRENCE selects which match (default 1)."
 ;;; Block-level override
 
 (describe "Integration: block overrides inline"
-  :var (skip-reason)
-  (before-all
-    (unless asciidoc-test-grammars-available
-      (setq skip-reason "tree-sitter grammars not installed")))
-
   (it "unordered list markers override spurious emphasis"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-sample-buffer
       (expect (asciidoc-test-face-at-match "* Enable feature A")
               :to-equal 'asciidoc-markup-face)))
 
   (it "nested list markers override spurious emphasis"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-sample-buffer
       (expect (asciidoc-test-face-at-match "** Nested item")
               :to-equal 'asciidoc-markup-face)))
 
   (it "headings after list markers are not affected by inline misparse"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-sample-buffer
       ;; == Final Notes comes after the list section with * markers
       (expect (asciidoc-test-face-at-match "== Final Notes")
               :to-equal 'asciidoc-title-1-face)))
 
   (it "listing block body overrides inline misparse"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-sample-buffer
       ;; Code inside a listing block should get the code face even if
       ;; the inline parser sees emphasis markers.
@@ -200,13 +184,8 @@ OCCURRENCE selects which match (default 1)."
 ;;; Navigation integration
 
 (describe "Integration: navigation"
-  :var (skip-reason)
-  (before-all
-    (unless asciidoc-test-grammars-available
-      (setq skip-reason "tree-sitter grammars not installed")))
-
   (it "navigates forward through sections with beginning-of-defun"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-sample-buffer
       (beginning-of-defun -1)
       (expect (looking-at "== Getting Started") :to-be-truthy)
@@ -216,7 +195,7 @@ OCCURRENCE selects which match (default 1)."
       (expect (looking-at "=== Configuration") :to-be-truthy)))
 
   (it "navigates backward through sections with beginning-of-defun"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-sample-buffer
       (goto-char (point-max))
       (beginning-of-defun)
@@ -227,7 +206,7 @@ OCCURRENCE selects which match (default 1)."
       (expect (looking-at "== Admonitions and Blocks") :to-be-truthy)))
 
   (it "moves forward by sentence across block elements"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-sample-buffer
       (search-forward "== Code Examples")
       (forward-line 1)
@@ -243,13 +222,8 @@ OCCURRENCE selects which match (default 1)."
 ;;; Imenu integration
 
 (describe "Integration: imenu"
-  :var (skip-reason)
-  (before-all
-    (unless asciidoc-test-grammars-available
-      (setq skip-reason "tree-sitter grammars not installed")))
-
   (it "produces a Section group with all headings"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-sample-buffer
       (let* ((index (treesit-simple-imenu))
              (sections (cdr (assoc "Section" index)))

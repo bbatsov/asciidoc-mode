@@ -8,18 +8,11 @@
 
 (require 'test-helper)
 
-(defvar asciidoc-test-grammars-available
-  (and (treesit-available-p)
-       (treesit-language-available-p 'asciidoc)
-       (treesit-language-available-p 'asciidoc-inline))
-  "Non-nil if both AsciiDoc tree-sitter grammars are installed.")
-
 ;;; Font-lock query validation
 
 (describe "Font-lock: query validation"
   (it "validates every query against its grammar"
-    (assume asciidoc-test-grammars-available
-            "tree-sitter grammars not installed")
+    (asciidoc-test-assume-grammars)
     (expect asciidoc--font-lock-settings :not :to-be nil)
     (dolist (setting asciidoc--font-lock-settings)
       (let* ((query (car setting))
@@ -57,40 +50,34 @@
       (expect comment-start :to-equal "// ")))
 
   (it "enables outline-minor-mode"
-    (assume asciidoc-test-grammars-available
-            "tree-sitter grammars not installed")
+    (asciidoc-test-assume-grammars)
     (with-asciidoc-buffer ""
       (expect outline-minor-mode :to-be-truthy))))
 
 ;;; Font-lock: headings
 
 (describe "Font-lock: headings"
-  :var (skip-reason)
-  (before-all
-    (unless asciidoc-test-grammars-available
-      (setq skip-reason "tree-sitter grammars not installed")))
-
   (it "fontifies document title"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "= Document Title\n"
       (expect (asciidoc-test-face-at 1)
               :to-equal 'asciidoc-document-title-face)))
 
   (it "fontifies level-1 title"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "== Section 1\n"
       (expect (asciidoc-test-face-at 1)
               :to-equal 'asciidoc-title-1-face)))
 
   (it "fontifies level-2 title"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "== Section 1\n\n=== Section 2\n"
       (search-forward "=== Section 2")
       (expect (asciidoc-test-face-at (match-beginning 0))
               :to-equal 'asciidoc-title-2-face)))
 
   (it "fontifies level-3 title"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer
         "== Section 1\n\n=== Section 2\n\n==== Section 3\n"
       (search-forward "==== Section 3")
@@ -98,7 +85,7 @@
               :to-equal 'asciidoc-title-3-face)))
 
   (it "fontifies level-4 title"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer
         (concat "== Section 1\n\n=== Section 2\n\n==== Section 3\n\n"
                 "===== Section 4\n")
@@ -107,7 +94,7 @@
               :to-equal 'asciidoc-title-4-face)))
 
   (it "fontifies level-5 title"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer
         (concat "== Section 1\n\n=== Section 2\n\n==== Section 3\n\n"
                 "===== Section 4\n\n====== Section 5\n")
@@ -116,7 +103,7 @@
               :to-equal 'asciidoc-title-5-face)))
 
   (it "does not bleed the title face onto header attribute lines"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     ;; The grammar nests document attributes inside `document_title'; the
     ;; title face must not cover the `:name: value' lines below the title.
     (with-fontified-asciidoc-buffer "= Title\n:author: Jane\n\nBody.\n"
@@ -131,13 +118,8 @@
 ;;; Font-lock: comments
 
 (describe "Font-lock: comments"
-  :var (skip-reason)
-  (before-all
-    (unless asciidoc-test-grammars-available
-      (setq skip-reason "tree-sitter grammars not installed")))
-
   (it "fontifies line comments"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "// a comment\n"
       (expect (asciidoc-test-face-at 1)
               :to-equal 'font-lock-comment-face))))
@@ -145,13 +127,9 @@
 ;;; Font-lock: inline
 
 (describe "Font-lock: inline"
-  :var (skip-reason)
-  (before-all
-    (unless asciidoc-test-grammars-available
-      (setq skip-reason "tree-sitter grammars not installed")))
 
   (it "fontifies bold text"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "some *bold* text\n"
       ;; The `*bold*' part should have the bold face.
       (let ((star-pos (string-match "\\*bold" "some *bold* text")))
@@ -159,21 +137,21 @@
                 :to-equal 'bold))))
 
   (it "fontifies italic text"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "some _italic_ text\n"
       (let ((pos (string-match "_italic" "some _italic_ text")))
         (expect (asciidoc-test-face-at (+ (point-min) pos))
                 :to-equal 'italic))))
 
   (it "fontifies monospace text"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "some `mono` text\n"
       (let ((pos (string-match "`mono" "some `mono` text")))
         (expect (asciidoc-test-face-at (+ (point-min) pos))
                 :to-equal 'asciidoc-code-face))))
 
   (it "fades typographic-quote delimiters and leaves the text plain"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "say \"`hello`\" now\n"
       (let ((open (string-match "\"`" (buffer-string)))
             (text (string-match "hello" (buffer-string))))
@@ -184,14 +162,14 @@
         (expect (asciidoc-test-face-at (1+ text)) :to-be nil))))
 
   (it "fontifies single typographic quotes too"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "an '`aside`' here\n"
       (let ((open (string-match "'`" (buffer-string))))
         (expect (asciidoc-test-face-at (1+ open))
                 :to-equal 'asciidoc-markup-face))))
 
   (it "fontifies superscript text and raises it"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "E = mc^2^ today\n"
       (let ((pos (+ (point-min) (string-match "2" "E = mc^2^ today"))))
         (expect (asciidoc-test-face-at pos)
@@ -200,7 +178,7 @@
                 :to-equal (list 'raise asciidoc-superscript-raise)))))
 
   (it "fontifies subscript text and lowers it"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "H~2~O is water\n"
       (let ((pos (+ (point-min) (string-match "2" "H~2~O is water"))))
         (expect (asciidoc-test-face-at pos)
@@ -209,21 +187,21 @@
                 :to-equal (list 'raise asciidoc-subscript-raise)))))
 
   (it "leaves the superscript delimiters on the baseline"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "E = mc^2^ today\n"
       ;; the opening `^' must not carry the raise display property
       (let ((caret (+ (point-min) (string-match "\\^2" "E = mc^2^ today"))))
         (expect (get-text-property caret 'display) :to-be nil))))
 
   (it "fontifies autolinks with the URL face"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "Visit https://example.com for details.\n"
       (let ((pos (string-match "https" "Visit https://example.com for details.")))
         (expect (asciidoc-test-face-at (+ (point-min) pos))
                 :to-equal 'asciidoc-url-face))))
 
   (it "fontifies a link label distinctly from its URL"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "See https://example.com[the docs] now.\n"
       (let ((url (string-match "example" (buffer-string)))
             (label (string-match "the docs" (buffer-string))))
@@ -233,7 +211,7 @@
                 :to-equal 'asciidoc-link-face))))
 
   (it "leaves a URL inside a macro's attribute list as plain text"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     ;; The `link=' target of an `image:' macro should not be singled out as
     ;; a standalone URL, so it matches a `{attr}'-based target.
     (with-fontified-asciidoc-buffer
@@ -243,7 +221,7 @@
         (expect (get-text-property (+ (point-min) pos) 'keymap) :to-be nil))))
 
   (it "fontifies footnote marker and text distinctly"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "Claim footnote:[a source] here.\n"
       (expect (asciidoc-test-face-at (+ (point-min) (string-match "footnote" (buffer-string))))
               :to-equal 'asciidoc-footnote-marker-face)
@@ -251,14 +229,14 @@
               :to-equal 'asciidoc-footnote-text-face)))
 
   (it "fontifies cross-references with the cross-reference face"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "= T\n\nSee <<some-id>> for details.\n"
       (let ((pos (string-match "<<some-id>>" (buffer-string))))
         (expect (asciidoc-test-face-at (1+ pos))
                 :to-equal 'asciidoc-cross-reference-face))))
 
   (it "fontifies anchors with the anchor face"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "= T\n\n[[my-anchor]] target.\n"
       (let ((pos (string-match "\\[\\[my-anchor" (buffer-string))))
         (expect (asciidoc-test-face-at (+ pos 2))
@@ -274,14 +252,14 @@
             :to-equal 'font-lock-comment-face))
 
   (it "fontifies a highlighted span with the highlight face"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "A #marked# word.\n"
       (let ((pos (string-match "marked" (buffer-string))))
         (expect (asciidoc-test-face-at (1+ pos))
                 :to-equal 'asciidoc-highlight-face))))
 
   (it "fontifies a role name and applies a known role's styling"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "A [.underline]#styled# word.\n"
       (let ((role (string-match "underline" (buffer-string)))
             (text (string-match "styled" (buffer-string))))
@@ -292,14 +270,14 @@
                 :to-equal 'asciidoc-underline-face))))
 
   (it "leaves an unknown role's span unstyled"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "A [.bogus]#plain# word.\n"
       (let ((text (string-match "plain" (buffer-string))))
         ;; no styling face, and crucially not the highlight/mark face
         (expect (asciidoc-test-face-at (1+ text)) :to-equal 'default))))
 
   (it "fontifies multiple roles on an unconstrained span"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "A [.big.bold]##word## here.\n"
       (let ((big (string-match "big" (buffer-string)))
             (bold (string-match "bold" (buffer-string))))
@@ -316,40 +294,35 @@
 ;; no longer poisons inline fontification later in the buffer.
 
 (describe "Font-lock: inline content inside blocks"
-  :var (skip-reason)
-  (before-all
-    (unless asciidoc-test-grammars-available
-      (setq skip-reason "tree-sitter grammars not installed")))
-
   (it "fontifies markup at the start of a line that follows another line"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "First line\n*bold* here\n"
       (let ((pos (string-match "\\*bold" (buffer-string))))
         (expect (asciidoc-test-face-at (+ (point-min) pos)) :to-equal 'bold))))
 
   (it "fontifies a span that runs over two lines of a paragraph"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "Some *bold\ntext* here\n"
       (let ((pos (string-match "text\\*" (buffer-string))))
         (expect (asciidoc-test-face-at (+ (point-min) pos)) :to-equal 'bold))))
 
   (it "fontifies code inside an unordered list item"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (expect (asciidoc-test-mono-face "* item with `code` here\n" "`code`")
             :to-equal 'asciidoc-code-face))
 
   (it "fontifies code inside a table cell"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (expect (asciidoc-test-mono-face "|===\n| cell `code` text\n|===\n" "`code`")
             :to-equal 'asciidoc-code-face))
 
   (it "fontifies code inside a quote block"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (expect (asciidoc-test-mono-face "____\nquoted `code` text\n____\n" "`code`")
             :to-equal 'asciidoc-code-face))
 
   (it "fontifies code after a stray list marker (no cascade)"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     ;; A `*' list marker with no matching `*' used to put the inline
     ;; parser into an error state spanning the rest of the buffer.
     (expect (asciidoc-test-mono-face
@@ -357,7 +330,7 @@
             :to-equal 'asciidoc-code-face))
 
   (it "produces no inline parse error for a mixed document"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer
         "= Title\n\n* one\n* two\n* three\n\nText `code` and more.\n"
       (let ((parser (car (treesit-parser-list nil 'asciidoc-inline))))
@@ -368,13 +341,8 @@
 ;;; Font-lock: blocks
 
 (describe "Font-lock: blocks"
-  :var (skip-reason)
-  (before-all
-    (unless asciidoc-test-grammars-available
-      (setq skip-reason "tree-sitter grammars not installed")))
-
   (it "fontifies listing block body"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "----\nsome code\n----\n"
       (goto-char (point-min))
       (forward-line 1)
@@ -382,7 +350,7 @@
               :to-equal 'asciidoc-code-face)))
 
   (it "fontifies indented literal blocks"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "= T\n\n  indented literal\n"
       (goto-char (point-min))
       (forward-line 2)
@@ -390,7 +358,7 @@
               :to-equal 'font-lock-string-face)))
 
   (it "fontifies markdown-style quote blocks"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "= T\n\n> A quoted line\n"
       (goto-char (point-min))
       (forward-line 2)
@@ -398,7 +366,7 @@
               :to-equal 'font-lock-doc-face)))
 
   (it "fontifies thematic breaks"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "= T\n\n'''\n"
       (goto-char (point-min))
       (forward-line 2)
@@ -408,43 +376,38 @@
 ;;; Font-lock: block delimiters
 
 (describe "Font-lock: block delimiters"
-  :var (skip-reason)
-  (before-all
-    (unless asciidoc-test-grammars-available
-      (setq skip-reason "tree-sitter grammars not installed")))
-
   (it "fontifies listing block delimiters"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "----\ncode\n----\n"
       (expect (asciidoc-test-face-at 1)
               :to-equal 'asciidoc-markup-face)))
 
   (it "fontifies literal block delimiters"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "....\nlit\n....\n"
       (expect (asciidoc-test-face-at 1)
               :to-equal 'asciidoc-markup-face)))
 
   (it "fontifies passthrough block delimiters"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "++++\npass\n++++\n"
       (expect (asciidoc-test-face-at 1)
               :to-equal 'asciidoc-markup-face)))
 
   (it "fontifies open block delimiters"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "--\nopen\n--\n"
       (expect (asciidoc-test-face-at 1)
               :to-equal 'asciidoc-markup-face)))
 
   (it "fontifies quote block delimiters"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "____\nquote\n____\n"
       (expect (asciidoc-test-face-at 1)
               :to-equal 'asciidoc-markup-face)))
 
   (it "fontifies example block delimiters"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "====\nexample\n====\n"
       (expect (asciidoc-test-face-at 1)
               :to-equal 'asciidoc-markup-face))))
@@ -452,20 +415,15 @@
 ;;; Font-lock: list markers
 
 (describe "Font-lock: list markers"
-  :var (skip-reason)
-  (before-all
-    (unless asciidoc-test-grammars-available
-      (setq skip-reason "tree-sitter grammars not installed")))
-
   (it "fades unordered and ordered markers into the markup face"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "* one\n"
       (expect (asciidoc-test-face-at (point-min)) :to-equal 'asciidoc-markup-face))
     (with-fontified-asciidoc-buffer ". one\n"
       (expect (asciidoc-test-face-at (point-min)) :to-equal 'asciidoc-markup-face)))
 
   (it "keeps the checkbox distinct while fading its bullet"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "* [x] done\n"
       ;; the `*' bullet fades, but the `[x]' checkbox stays a meaningful token
       (expect (asciidoc-test-face-at (point-min)) :to-equal 'asciidoc-markup-face)
@@ -476,19 +434,14 @@
 ;;; Font-lock: tables
 
 (describe "Font-lock: tables"
-  :var (skip-reason)
-  (before-all
-    (unless asciidoc-test-grammars-available
-      (setq skip-reason "tree-sitter grammars not installed")))
-
   (it "fontifies table delimiters"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "|===\n| A | B\n|===\n"
       (expect (asciidoc-test-face-at 1)
               :to-equal 'asciidoc-markup-face)))
 
   (it "fontifies table cell format specifiers"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "|===\na| x\n|===\n"
       ;; The "a" cell-format spec on line 2 should get preprocessor face.
       (let ((pos (string-match "a| x" (buffer-string))))
@@ -496,29 +449,29 @@
                 :to-equal 'font-lock-preprocessor-face))))
 
   (it "fontifies the CSV table fence"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer ",===\nName,Age\n,===\n"
       (expect (asciidoc-test-face-at 1) :to-equal 'asciidoc-markup-face)))
 
   (it "fontifies the DSV table fence"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer ":===\na:b:c\n:===\n"
       (expect (asciidoc-test-face-at 1) :to-equal 'asciidoc-markup-face)))
 
   (it "fontifies inline markup in a cell that directly follows another"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "|===\n|foo|*bold*\n|===\n"
       (let ((pos (string-match "\\*bold" (buffer-string))))
         (expect (asciidoc-test-face-at (+ (point-min) pos)) :to-equal 'bold))))
 
   (it "fontifies inline markup inside a CSV cell"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer ",===\nName,*bold*\n,===\n"
       (let ((pos (string-match "\\*bold" (buffer-string))))
         (expect (asciidoc-test-face-at (+ (point-min) pos)) :to-equal 'bold))))
 
   (it "fontifies inline markup inside a DSV cell"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer ":===\nTerm:_def_\n:===\n"
       (let ((pos (string-match "_def" (buffer-string))))
         (expect (asciidoc-test-face-at (+ (point-min) pos)) :to-equal 'italic)))))
@@ -526,13 +479,8 @@
 ;;; Font-lock: description lists
 
 (describe "Font-lock: description lists"
-  :var (skip-reason)
-  (before-all
-    (unless asciidoc-test-grammars-available
-      (setq skip-reason "tree-sitter grammars not installed")))
-
   (it "fontifies the term and the `::' marker distinctly"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "CPU:: The brain.\n"
       (expect (asciidoc-test-face-at (point-min))
               :to-equal 'font-lock-keyword-face)
@@ -541,7 +489,7 @@
                 :to-equal 'asciidoc-markup-face))))
 
   (it "fontifies inline markup inside a description definition"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "CPU:: The *brain* of it.\n"
       (let ((pos (string-match "\\*brain" (buffer-string))))
         (expect (asciidoc-test-face-at (+ (point-min) pos)) :to-equal 'bold)))))
@@ -549,34 +497,29 @@
 ;;; Font-lock: attributes
 
 (describe "Font-lock: attributes"
-  :var (skip-reason)
-  (before-all
-    (unless asciidoc-test-grammars-available
-      (setq skip-reason "tree-sitter grammars not installed")))
-
   (it "fontifies document attribute name"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer ":author: Someone\n"
       ;; "author" should get the metadata-key face
       (expect (asciidoc-test-face-at 2)
               :to-equal 'asciidoc-metadata-key-face)))
 
   (it "fontifies document attribute value"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer ":author: Jane Doe\n"
       (let ((pos (string-match "Jane" (buffer-string))))
         (expect (asciidoc-test-face-at (1+ pos))
                 :to-equal 'asciidoc-metadata-value-face))))
 
   (it "highlights inline attribute references"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "= T\n\nSee {version} now.\n"
       (let ((pos (string-match "{version}" (buffer-string))))
         (expect (asciidoc-test-face-at (1+ pos))
                 :to-equal 'font-lock-variable-name-face))))
 
   (it "distinguishes intrinsic attributes from user references"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     ;; `{cpp}' is a built-in intrinsic, faced separately from a user `{name}'
     (with-fontified-asciidoc-buffer "= T\n\nUse {cpp} here.\n"
       (let ((pos (string-match "{cpp}" (buffer-string))))
@@ -584,7 +527,7 @@
                 :to-equal 'font-lock-escape-face))))
 
   (it "does not treat a brace group inside inline code as a reference"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     ;; `{x}' inside `code` stays monospace; the inline parser doesn't
     ;; re-parse a reference there, so shell-like `${x}' is left alone
     (with-fontified-asciidoc-buffer "= T\n\nRun `${x}` now.\n"
@@ -595,13 +538,8 @@
 ;;; Font-lock: admonitions
 
 (describe "Font-lock: admonitions"
-  :var (skip-reason)
-  (before-all
-    (unless asciidoc-test-grammars-available
-      (setq skip-reason "tree-sitter grammars not installed")))
-
   (it "color-codes the NOTE label"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "= Title\n\nNOTE: This is a note.\n"
       (let ((pos (string-match "NOTE:" (buffer-string))))
         ;; the keyword and its trailing colon both get the label face
@@ -613,7 +551,7 @@
                 :to-be-truthy))))
 
   (it "tints the whole admonition body, including continuation lines"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer
         "= Title\n\nWARNING: first line\nsecond line\n\nplain paragraph.\n"
       (let ((cont (string-match "second line" (buffer-string)))
@@ -628,7 +566,7 @@
                 :to-be nil))))
 
   (it "does not clobber inline markup in the admonition body"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     ;; Inline `code` keeps its monospace face; the block background is
     ;; layered underneath, not in place of it.
     (with-fontified-asciidoc-buffer "= Title\n\nNOTE: see `code` here.\n"
@@ -637,7 +575,7 @@
                 :to-be-truthy))))
 
   (it "does not treat a NOTE: line inside a listing block as an admonition"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "= T\n\n----\nNOTE: just code\n----\n"
       (let ((pos (string-match "NOTE:" (buffer-string))))
         (expect (asciidoc-test-face-at-includes
@@ -645,7 +583,7 @@
                 :to-be nil))))
 
   (it "leaves the body untinted when block fontification is off"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (let ((asciidoc-fontify-admonition-blocks nil))
       (with-fontified-asciidoc-buffer "= Title\n\nNOTE: a note.\n"
         (let ((pos (string-match "a note" (buffer-string))))
@@ -655,7 +593,7 @@
                   :to-be nil)))))
 
   (it "recognizes all admonition labels with per-type faces"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (dolist (label '("NOTE" "TIP" "IMPORTANT" "CAUTION" "WARNING"))
       (with-fontified-asciidoc-buffer (format "= Title\n\n%s: body.\n" label)
         (let ((pos (string-match label (buffer-string)))
@@ -668,8 +606,7 @@
 
 (describe "Block attribute extraction"
   (it "preserves attribute text without brackets or the trailing newline"
-    (assume asciidoc-test-grammars-available
-            "tree-sitter grammars not installed")
+    (asciidoc-test-assume-grammars)
     (dolist (value '("source,emacs-lisp" ",emacs-lisp"
                      "source%nowrap,python" "source,ruby,subs=\"verbatim,quotes\""))
       (with-asciidoc-buffer (format "[%s]\n----\ncode\n----\n" value)
@@ -714,13 +651,8 @@
       (expect (asciidoc--code-block-lang-mode "foo") :to-be nil))))
 
 (describe "Native source block fontification"
-  :var (skip-reason)
-  (before-all
-    (unless asciidoc-test-grammars-available
-      (setq skip-reason "tree-sitter grammars not installed")))
-
   (it "fontifies a source block with the language major mode"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer
         "= T\n\n[source,emacs-lisp]\n----\n(defun foo () nil)\n----\n"
       (let ((pos (string-match "defun" (buffer-string))))
@@ -728,7 +660,7 @@
                 :to-equal 'font-lock-keyword-face))))
 
   (it "leaves the code face when fontification is disabled"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (let ((asciidoc-fontify-code-blocks-natively nil))
       (with-fontified-asciidoc-buffer
           "= T\n\n[source,emacs-lisp]\n----\n(defun foo () nil)\n----\n"
@@ -737,7 +669,7 @@
                   :to-equal 'asciidoc-code-face)))))
 
   (it "respects the size cap"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (let ((asciidoc-fontify-code-blocks-natively 3))
       (with-fontified-asciidoc-buffer
           "= T\n\n[source,emacs-lisp]\n----\n(defun foo () nil)\n----\n"
@@ -746,14 +678,14 @@
                   :to-equal 'asciidoc-code-face)))))
 
   (it "does not natively fontify a plain listing block"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "= T\n\n----\n(defun foo () nil)\n----\n"
       (let ((pos (string-match "defun" (buffer-string))))
         (expect (asciidoc-test-face-at (1+ pos))
                 :to-equal 'asciidoc-code-face))))
 
   (it "keeps the code face for an unknown language"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer
         "= T\n\n[source,nosuchlang]\n----\nplain text\n----\n"
       (let ((pos (string-match "plain" (buffer-string))))
@@ -761,7 +693,7 @@
                 :to-equal 'asciidoc-code-face))))
 
   (it "does not recurse on a [source,asciidoc] block"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     ;; Resolving the language to `asciidoc-mode' itself must not re-enter
     ;; native fontification; the body keeps the verbatim code face.
     (with-fontified-asciidoc-buffer
@@ -773,13 +705,8 @@
 ;;; Imenu
 
 (describe "Imenu"
-  :var (skip-reason)
-  (before-all
-    (unless asciidoc-test-grammars-available
-      (setq skip-reason "tree-sitter grammars not installed")))
-
   (it "creates section entries"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-asciidoc-buffer "== First\n\n=== Second\n"
       (let ((index (treesit-simple-imenu)))
         ;; Should have a "Section" group
@@ -788,27 +715,22 @@
 ;;; Navigation
 
 (describe "Navigation"
-  :var (skip-reason)
-  (before-all
-    (unless asciidoc-test-grammars-available
-      (setq skip-reason "tree-sitter grammars not installed")))
-
   (it "moves to next section with beginning-of-defun"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-asciidoc-buffer "== First\n\nSome text.\n\n== Second\n"
       (goto-char (point-min))
       (beginning-of-defun -1)
       (expect (looking-at "== Second") :to-be-truthy)))
 
   (it "moves to previous section with beginning-of-defun"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-asciidoc-buffer "== First\n\nSome text.\n\n== Second\n"
       (goto-char (point-max))
       (beginning-of-defun)
       (expect (looking-at "== Second") :to-be-truthy)))
 
   (it "moves forward by sentence across paragraphs"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-asciidoc-buffer "== S\n\nFirst paragraph.\n\nSecond paragraph.\n"
       (goto-char (point-min))
       (search-forward "First")
@@ -819,13 +741,8 @@
 ;;; Reference navigation
 
 (describe "Reference navigation"
-  :var (skip-reason)
-  (before-all
-    (unless asciidoc-test-grammars-available
-      (setq skip-reason "tree-sitter grammars not installed")))
-
   (it "jumps from a cross-reference to its anchor"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "[[target]] The target.\n\nSee <<target>> now.\n"
       (re-search-forward "<<t")
       (backward-char)
@@ -833,7 +750,7 @@
       (expect (looking-at "\\[\\[target\\]\\]") :to-be-truthy)))
 
   (it "jumps from an xref macro to a shorthand anchor"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "[#sec] Section.\n\nSee xref:sec[the section].\n"
       (re-search-forward "xref:s")
       (backward-char)
@@ -841,7 +758,7 @@
       (expect (looking-at "\\[#sec\\]") :to-be-truthy)))
 
   (it "pushes the mark before jumping"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "[[target]] here.\n\nSee <<target>>.\n"
       (re-search-forward "<<t")
       (backward-char)
@@ -850,7 +767,7 @@
         (expect (mark) :to-equal from))))
 
   (it "opens a bare URL with browse-url"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (let (followed)
       (cl-letf (((symbol-function 'browse-url)
                  (lambda (url &rest _) (setq followed url))))
@@ -861,7 +778,7 @@
           (expect followed :to-equal "https://example.com")))))
 
   (it "opens a link macro target with browse-url"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (let (followed)
       (cl-letf (((symbol-function 'browse-url)
                  (lambda (url &rest _) (setq followed url))))
@@ -872,7 +789,7 @@
           (expect followed :to-equal "https://example.com")))))
 
   (it "follows a cross-reference to a section by its auto-id"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer
         "= D\n\n== Getting Started\n\nSee <<_getting_started>>.\n"
       (re-search-forward "<<_")
@@ -881,7 +798,7 @@
       (expect (looking-at "== Getting Started") :to-be-truthy)))
 
   (it "follows a natural-title cross-reference to its section"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer
         "== Getting Started\n\nSee <<Getting Started>>.\n"
       (re-search-forward "<<G")
@@ -890,21 +807,21 @@
       (expect (looking-at "== Getting Started") :to-be-truthy)))
 
   (it "errors when a cross-reference has no anchor"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "See <<missing>> here.\n"
       (re-search-forward "<<m")
       (backward-char)
       (expect (asciidoc-follow-reference-at-point) :to-throw 'user-error)))
 
   (it "marks reference text as clickable"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "[[target]] x\n\nSee <<target>> now.\n"
       (let ((pos (+ (point-min) (string-match "<<target" (buffer-string)))))
         (expect (get-text-property pos 'keymap)
                 :to-equal asciidoc-reference-map))))
 
   (it "underlines reference text under the mouse pointer"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "[[target]] x\n\nSee <<target>> now.\n"
       (let ((pos (+ (point-min) (string-match "<<target" (buffer-string)))))
         (expect (get-text-property pos 'mouse-face)
@@ -935,27 +852,22 @@
 ;;; Xref backend
 
 (describe "Xref backend"
-  :var (skip-reason)
-  (before-all
-    (unless asciidoc-test-grammars-available
-      (setq skip-reason "tree-sitter grammars not installed")))
-
   (it "reports the cross-reference id at point"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "See <<my-id>> now.\n"
       (re-search-forward "<<m")
       (backward-char)
       (expect (xref-backend-identifier-at-point 'asciidoc) :to-equal "my-id")))
 
   (it "reports the id of an xref macro at point"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "See xref:my-id[text].\n"
       (re-search-forward "xref:m")
       (backward-char)
       (expect (xref-backend-identifier-at-point 'asciidoc) :to-equal "my-id")))
 
   (it "resolves a definition to its explicit anchor"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "[[my-id]] here.\n\nSee <<my-id>>.\n"
       (let* ((defs (xref-backend-definitions 'asciidoc "my-id"))
              (loc (xref-item-location (car defs))))
@@ -964,7 +876,7 @@
         (expect (looking-at "\\[\\[my-id\\]\\]") :to-be-truthy))))
 
   (it "resolves a definition to a section by auto-id"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer
         "= D\n\n== Getting Started\n\nSee <<_getting_started>>.\n"
       (let* ((defs (xref-backend-definitions 'asciidoc "_getting_started"))
@@ -973,7 +885,7 @@
         (expect (looking-at "== Getting Started") :to-be-truthy))))
 
   (it "resolves a definition by section title"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer
         "== Getting Started\n\nSee <<Getting Started>>.\n"
       (let* ((defs (xref-backend-definitions 'asciidoc "Getting Started"))
@@ -982,20 +894,20 @@
         (expect (looking-at "== Getting Started") :to-be-truthy))))
 
   (it "offers explicit and section ids for completion"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "= D\n\n== Intro\n\n[[boom]] x\n"
       (let ((ids (xref-backend-identifier-completion-table 'asciidoc)))
         (expect (member "boom" ids) :to-be-truthy)
         (expect (member "_intro" ids) :to-be-truthy))))
 
   (it "finds <<id>> and xref:id[] references to an anchor"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer
         "[[foo]] def.\n\nSee <<foo>>, xref:foo[here], and <<foo,cap>>.\n"
       (expect (length (xref-backend-references 'asciidoc "foo")) :to-equal 3)))
 
   (it "reports the anchor id at point on a definition"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "[[my-anchor]] here.\n"
       (goto-char (point-min))
       (search-forward "my-anchor")
@@ -1070,10 +982,7 @@
 ;;; Cross-file references
 
 (describe "Cross-file references (Antora)"
-  :var (root pages skip-reason)
-  (before-all
-    (unless asciidoc-test-grammars-available
-      (setq skip-reason "tree-sitter grammars not installed")))
+  :var (root pages)
   (before-each
     (setq root (make-temp-file "asciidoc-antora" t))
     (setq pages (expand-file-name "modules/ROOT/pages" root))
@@ -1117,7 +1026,7 @@
       (expect (asciidoc--resolve-reference "basics/nope.adoc#x") :to-be nil)))
 
   (it "opens the target file when following a cross-file xref"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-current-buffer (find-file-noselect (expand-file-name "usage.adoc" pages))
       (font-lock-ensure)
       (goto-char (point-min))
@@ -1152,38 +1061,34 @@
 ;;; Flyspell
 
 (describe "Flyspell integration"
-  :var (skip-reason)
-  (before-all
-    (unless asciidoc-test-grammars-available
-      (setq skip-reason "tree-sitter grammars not installed")))
 
   (it "registers a flyspell verify predicate"
     (expect (get 'asciidoc-mode 'flyspell-mode-predicate)
             :to-equal 'asciidoc--flyspell-verify))
 
   (it "checks words in ordinary prose"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "Some ordinary prose here.\n"
       (goto-char (point-min))
       (search-forward "prose")
       (expect (asciidoc--flyspell-verify) :to-be-truthy)))
 
   (it "skips words inside a link"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "See https://zzqqzz.example here.\n"
       (goto-char (point-min))
       (search-forward "zzqqzz")
       (expect (asciidoc--flyspell-verify) :to-be nil)))
 
   (it "skips words inside a cross-reference"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "See <<some-section>> now.\n"
       (goto-char (point-min))
       (search-forward "section")
       (expect (asciidoc--flyspell-verify) :to-be nil)))
 
   (it "skips words inside inline code"
-    (assume asciidoc-test-grammars-available skip-reason)
+    (asciidoc-test-assume-grammars)
     (with-fontified-asciidoc-buffer "Run `somefn` to start.\n"
       (goto-char (point-min))
       (search-forward "somefn")

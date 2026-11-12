@@ -9,6 +9,24 @@
 (require 'buttercup)
 (require 'asciidoc-mode)
 
+(defvar asciidoc-test-grammars-available
+  (and (treesit-available-p)
+       (treesit-language-available-p 'asciidoc)
+       (treesit-language-available-p 'asciidoc-inline))
+  "Non-nil if both AsciiDoc tree-sitter grammars are installed.")
+
+;; CI sets this so a broken grammar install fails the run instead of
+;; quietly skipping most of the suite.
+(when (and (getenv "ASCIIDOC_MODE_REQUIRE_GRAMMARS")
+           (not asciidoc-test-grammars-available))
+  (error "The AsciiDoc tree-sitter grammars are required but not installed"))
+
+(defun asciidoc-test-assume-grammars ()
+  "Skip the current spec unless the AsciiDoc grammars are installed.
+Call it first thing in a spec."
+  (assume asciidoc-test-grammars-available
+          "tree-sitter grammars not installed"))
+
 (defmacro with-asciidoc-buffer (content &rest body)
   "Create a temp buffer with CONTENT in `asciidoc-mode', then run BODY."
   (declare (indent 1) (debug t))
