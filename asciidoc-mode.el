@@ -843,24 +843,74 @@ and always returns nil, doing its work as a side effect."
               (asciidoc--fontify-code-block-natively lang beg end)))))))
   nil)
 
-;;; Imenu
-
-(defun asciidoc--imenu-name (node)
-  "Return a clean section name for NODE, stripping the leading `=' markers."
-  (let ((text (treesit-node-text node t)))
-    (if (string-match "^=+\\s-*" text)
-        (substring text (match-end 0))
-      text)))
-
-(defvar asciidoc--treesit-simple-imenu-settings
-  `(("Section" "\\`title[1-5]\\'" nil asciidoc--imenu-name))
-  "Imenu settings for `asciidoc-mode'.")
-
 ;;; Outline
 
 (defvar asciidoc--outline-predicate
   "\\`\\(?:document_title\\|title[1-5]\\)\\'"
   "Regexp matching title node types for outline integration.")
+
+;;; Imenu
+
+(defconst asciidoc--section-node-regexp
+  "\\`\\(?:document_title\\|section\\)\\'"
+  "Regexp matching the node types that make up the document's outline.
+A `section' holds its title and everything below it, nested sections
+included; the `document_title' is the header.")
+
+(defun asciidoc--imenu-name (node)
+  "Return the title of NODE, a `section', `document_title' or title node.
+That is the title's own line, without the leading `=' markers.  Return
+nil for any other node."
+  (let ((title (if (equal (treesit-node-type node) "section")
+                   (treesit-node-child node 0 t)
+                 node)))
+    (when (and title
+               (string-match-p asciidoc--outline-predicate
+                               (treesit-node-type title)))
+      (string-trim
+       (replace-regexp-in-string
+        "\\`=+" "" (car (split-string (treesit-node-text title t) "\n")))))))
+
+(defun asciidoc--section-p (node)
+  "Return non-nil if NODE is a `section'."
+  (equal (treesit-node-type node) "section"))
+
+(defun asciidoc--enclosing-section ()
+  "Return the innermost `section' node around point, or nil.
+A `section' node ends with its last block, so the blank lines after it
+are looked up from the text before them: they belong to the section
+they follow, not to the next one."
+  (let ((pos (save-excursion
+               (skip-chars-backward " \t\n")
+               (max (point-min) (1- (point))))))
+    (treesit-parent-until
+     (treesit-node-on pos pos 'asciidoc) #'asciidoc--section-p t)))
+
+(defun asciidoc--current-section-name ()
+  "Return the path of section titles around point, outermost first.
+For `add-log-current-defun-function', which also feeds `which-function-mode'."
+  (let ((section (asciidoc--enclosing-section))
+        names)
+    (while section
+      (push (asciidoc--imenu-name section) names)
+      (setq section (treesit-parent-until section #'asciidoc--section-p)))
+    (when names
+      (string-join names treesit-add-log-defun-delimiter))))
+
+(defun asciidoc-narrow-to-section ()
+  "Narrow the buffer to the section around point, subsections included.
+The parsers only see the narrowed text, and the grammar does not accept
+a document that starts below level 1 (`=== Title').  While narrowed to
+such a subsection, text you type is not highlighted until you widen."
+  (interactive)
+  (let ((section (asciidoc--enclosing-section)))
+    (unless section
+      (user-error "Point is not inside a section"))
+    (narrow-to-region (treesit-node-start section) (treesit-node-end section))))
+
+(defvar asciidoc--treesit-simple-imenu-settings
+  `(("Section" ,asciidoc--section-node-regexp nil asciidoc--imenu-name))
+  "Imenu settings for `asciidoc-mode'.")
 
 ;;; Heading commands
 
@@ -868,11 +918,30 @@ and always returns nil, doing its work as a side effect."
   "Regexp matching a one-line AsciiDoc heading.
 Group 1 is the run of leading `=' markers.")
 
+(defconst asciidoc--verbatim-node-regexp
+  (rx bos (or "listing_block" "literal_block" "ident_block"
+              "block_comment" "line_comment")
+      eos)
+  "Regexp matching the node types whose content is not AsciiDoc markup.")
+
+(defun asciidoc--heading-at-p (pos)
+  "Return non-nil if the heading-looking line at POS is a real heading.
+A line such as `== Title' inside a listing block or a comment is not
+one.  Without the grammars every such line counts."
+  (not (and (treesit-parser-list nil 'asciidoc)
+            (treesit-parent-until
+             (treesit-node-at pos 'asciidoc)
+             (lambda (n)
+               (string-match-p asciidoc--verbatim-node-regexp
+                               (treesit-node-type n)))
+             t))))
+
 (defun asciidoc--heading-marker-bounds ()
   "Return (BEG . END) of the current line's heading markers, or nil."
   (save-excursion
     (beginning-of-line)
-    (when (looking-at asciidoc--heading-regexp)
+    (when (and (looking-at asciidoc--heading-regexp)
+               (asciidoc--heading-at-p (point)))
       (cons (match-beginning 1) (match-end 1)))))
 
 (defun asciidoc-promote-heading ()
@@ -960,8 +1029,11 @@ the latter being a natural cross reference such as `<<My Section Title>>'."
       (catch 'found
         (while (re-search-forward "^=+[ \t]+\\(.+?\\)[ \t]*$" nil t)
           (let ((title (match-string-no-properties 1)))
-            (when (or (equal title id)
-                      (equal (asciidoc--section-id title (car ps) (cdr ps)) id))
+            (when (and (or (equal title id)
+                           (equal (asciidoc--section-id title (car ps) (cdr ps))
+                                  id))
+                       (save-match-data
+                         (asciidoc--heading-at-p (match-beginning 0))))
               (throw 'found (match-beginning 0)))))
         nil))))
 
@@ -1148,9 +1220,10 @@ and section titles (for natural cross references like `<<My Title>>')."
       (goto-char (point-min))
       (let ((ps (asciidoc--id-prefix-separator)))
         (while (re-search-forward "^=+[ \t]+\\(.+?\\)[ \t]*$" nil t)
-          (let ((title (match-string-no-properties 1)))
-            (push (asciidoc--section-id title (car ps) (cdr ps)) ids)
-            (push title ids)))))
+          (when (save-match-data (asciidoc--heading-at-p (match-beginning 0)))
+            (let ((title (match-string-no-properties 1)))
+              (push (asciidoc--section-id title (car ps) (cdr ps)) ids)
+              (push title ids))))))
     (delete-dups (nreverse ids))))
 
 (defconst asciidoc--builtin-attributes
@@ -1492,8 +1565,7 @@ Install them with \\[asciidoc-install-grammars].
                 asciidoc--treesit-simple-imenu-settings)
 
     ;; Navigation
-    (setq-local treesit-defun-type-regexp
-                "\\`\\(?:document_title\\|title[1-5]\\)\\'")
+    (setq-local treesit-defun-type-regexp asciidoc--outline-predicate)
     (setq-local treesit-defun-name-function #'asciidoc--imenu-name)
     (setq-local treesit-thing-settings
                 `((asciidoc
@@ -1512,6 +1584,13 @@ Install them with \\[asciidoc-install-grammars].
     (add-hook 'completion-at-point-functions #'asciidoc--capf nil t)
 
     (treesit-major-mode-setup)
+
+    ;; The defun things above are title nodes, which is what makes C-M-a
+    ;; and C-M-e step from heading to heading.  A title does not contain
+    ;; its section's body though, so the current section's name has to come
+    ;; from the enclosing `section' nodes instead.
+    (setq-local add-log-current-defun-function
+                #'asciidoc--current-section-name)
 
     ;; Enable outline-minor-mode for heading navigation and folding, with
     ;; TAB/S-TAB cycling visibility on heading lines.
@@ -1539,6 +1618,9 @@ Install them with \\[asciidoc-install-grammars].
 (keymap-set asciidoc-mode-map "C-c C-b" #'outline-backward-same-level)
 (keymap-set asciidoc-mode-map "C-c C-u" #'outline-up-heading)
 (keymap-set asciidoc-mode-map "C-c C-o" #'asciidoc-follow-reference-at-point)
+;; `narrow-to-defun' would narrow to the heading line alone.
+(keymap-set asciidoc-mode-map "<remap> <narrow-to-defun>"
+            #'asciidoc-narrow-to-section)
 
 ;;; Menu
 
@@ -1573,7 +1655,7 @@ Install them with \\[asciidoc-install-grammars].
      ["Mark Subtree" outline-mark-subtree])
     "---"
     ["Comment/Uncomment Region" comment-dwim]
-    ["Narrow to Section" narrow-to-defun]
+    ["Narrow to Section" asciidoc-narrow-to-section]
     ["Widen" widen :enable (buffer-narrowed-p)]
     "---"
     ["Install Grammars" asciidoc-install-grammars]

@@ -11,9 +11,14 @@
 * Highlight typographic (curved) quotes (`"\`double\`"` and `'\`single\`'`), now that the grammar parses them as a distinct node. The two-character quote markers fade into the markup face, and the quoted text stays plain prose; the inner backticks are no longer mistaken for an inline code span.
 * https://github.com/bbatsov/asciidoc-mode/pull/23[#23]: Highlight inline markup inside section titles, the document title, block titles, document attribute values and Markdown-style quotes. It used to be hidden behind the title's (or value's) own face. A URL in an attribute value is now a followable link, like anywhere else.
 * https://github.com/bbatsov/asciidoc-mode/pull/23[#23]: Give table header rows their own face, `asciidoc-table-header-face`.
+* https://github.com/bbatsov/asciidoc-mode/pull/23[#23]: Nest the Imenu index like the document's outline, and include the document title in it.
+* https://github.com/bbatsov/asciidoc-mode/pull/23[#23]: Add `asciidoc-narrow-to-section`, which narrows to the section around point with its subsections. It takes over `C-x n d`, as `narrow-to-defun` narrowed to the heading line alone.
+* https://github.com/bbatsov/asciidoc-mode/pull/23[#23]: Report the current section in `which-function-mode` and `add-log-current-defun`.
 
 === Bug Fixes
 
+* https://github.com/bbatsov/asciidoc-mode/pull/23[#23]: Strip the trailing newline from Imenu entries.
+* https://github.com/bbatsov/asciidoc-mode/pull/23[#23]: Stop treating a heading-like line inside a listing block, a literal block or a comment as a section: it is no longer offered as a cross-reference target or changed by the promote/demote commands.
 * Stop singling out a URL inside an inline macro's attribute list (e.g. the `link="..."` target of an `image:` macro). Such a URL was fontified as a standalone link -- highlighted and clickable -- only when written literally, so a literal `link=` and a `{attr}`-based one looked different. It is now left as plain attribute text in both cases.
 
 == 0.4.0 (2026-06-11)

@@ -818,12 +818,69 @@
 ;;; Imenu
 
 (describe "Imenu"
-  (it "creates section entries"
+  (it "lists sections by title, nested like the document"
     (asciidoc-test-assume-grammars)
-    (with-asciidoc-buffer "== First\n\n=== Second\n"
-      (let ((index (treesit-simple-imenu)))
-        ;; Should have a "Section" group
-        (expect (assoc "Section" index) :not :to-be nil)))))
+    (with-asciidoc-buffer "= Doc\n\n== First\n\n=== Second\n\ntext\n\n== Third\n"
+      (let ((sections (cdr (assoc "Section" (treesit-simple-imenu)))))
+        (expect (mapcar #'car sections) :to-equal '("Doc" "First" "Third"))
+        ;; A section with subsections is a submenu: an entry for the
+        ;; section itself, then its children.
+        (expect (mapcar #'car (cdr (assoc "First" sections)))
+                :to-equal '(" " "Second")))))
+
+  (it "leaves out heading-like lines inside a listing block"
+    (asciidoc-test-assume-grammars)
+    (with-asciidoc-buffer "== Real\n\n----\n== Not a heading\n----\n"
+      (expect (mapcar #'car (cdr (assoc "Section" (treesit-simple-imenu))))
+              :to-equal '("Real")))))
+
+;;; Sections
+
+(describe "Sections"
+  (it "reports the path of section titles around point"
+    (asciidoc-test-assume-grammars)
+    (with-asciidoc-buffer "= Doc\n\nintro\n\n== One\n\n=== Sub\n\ntext\n\n== Two\n"
+      (search-forward "text")
+      (expect (add-log-current-defun) :to-equal "One.Sub")
+      (goto-char (point-min))
+      (search-forward "intro")
+      (expect (add-log-current-defun) :to-be nil)))
+
+  (it "leaves earlier sibling sections out of the path"
+    (asciidoc-test-assume-grammars)
+    (with-asciidoc-buffer "== One\n\n=== SubA\n\nx\n\n=== SubB\n\nyyy\n\n== Two\n\nzzz\n"
+      (search-forward "yyy")
+      (expect (add-log-current-defun) :to-equal "One.SubB")
+      (search-forward "zzz")
+      (expect (add-log-current-defun) :to-equal "Two")))
+
+  (it "attributes the blank lines after a section to that section"
+    (asciidoc-test-assume-grammars)
+    (with-asciidoc-buffer "== One\n\nbody\n\n\n\n== Two\n\nmore\n"
+      (search-forward "body\n\n")
+      (expect (add-log-current-defun) :to-equal "One")
+      (asciidoc-narrow-to-section)
+      (expect (buffer-string) :to-equal "== One\n\nbody\n")))
+
+  (it "narrows to the section around point, subsections included"
+    (asciidoc-test-assume-grammars)
+    (with-asciidoc-buffer "== One\n\nbody\n\n=== Sub\n\ntext\n\n== Two\n\nmore\n"
+      (search-forward "body")
+      (asciidoc-narrow-to-section)
+      (expect (buffer-string) :to-equal "== One\n\nbody\n\n=== Sub\n\ntext\n")
+      (widen)
+      (search-forward "text")
+      (asciidoc-narrow-to-section)
+      (expect (buffer-string) :to-equal "=== Sub\n\ntext\n")))
+
+  (it "refuses to narrow outside of any section"
+    (asciidoc-test-assume-grammars)
+    (with-asciidoc-buffer "Just a paragraph.\n"
+      (expect (asciidoc-narrow-to-section) :to-throw 'user-error)))
+
+  (it "remaps narrow-to-defun to the section command"
+    (expect (keymap-lookup asciidoc-mode-map "<remap> <narrow-to-defun>")
+            :to-be #'asciidoc-narrow-to-section)))
 
 ;;; Navigation
 
@@ -1012,6 +1069,12 @@
       (let ((ids (xref-backend-identifier-completion-table 'asciidoc)))
         (expect (member "boom" ids) :to-be-truthy)
         (expect (member "_intro" ids) :to-be-truthy))))
+
+  (it "does not offer a heading-like line inside a listing block"
+    (asciidoc-test-assume-grammars)
+    (with-asciidoc-buffer "== Real\n\n----\n== Not a heading\n----\n"
+      (expect (asciidoc--all-anchor-ids) :to-equal '("_real" "Real"))
+      (expect (asciidoc--anchor-position "_not_a_heading") :to-be nil)))
 
   (it "finds <<id>> and xref:id[] references to an anchor"
     (asciidoc-test-assume-grammars)
@@ -1304,7 +1367,13 @@
     (it "errors when point is not on a heading"
       (with-asciidoc-buffer "Just a paragraph.\n"
         (goto-char (point-min))
-        (expect (asciidoc-promote-heading) :to-throw 'user-error)))))
+        (expect (asciidoc-promote-heading) :to-throw 'user-error)))
+
+    (it "ignores a heading-like line inside a listing block"
+      (asciidoc-test-assume-grammars)
+      (with-asciidoc-buffer "----\n== Not a heading\n----\n"
+        (forward-line 1)
+        (expect (asciidoc-demote-heading) :to-throw 'user-error)))))
 
 ;;; Keymap
 

@@ -14,7 +14,8 @@ A tree-sitter-based major mode for editing https://asciidoc.org[AsciiDoc] files 
 * Syntax highlighting via tree-sitter (headings, inline markup, blocks, lists, tables, admonitions, macros, attributes)
 * Native source-block highlighting -- `[source,lang]` blocks are fontified with the language's own major mode (toggle and size limit via `asciidoc-fontify-code-blocks-natively`)
 * Section navigation (`C-M-a` / `C-M-e`) and sentence-level movement (`M-a` / `M-e`) across paragraphs and blocks
-* Imenu support for section navigation
+* Imenu support for section navigation, nested like the document's outline
+* Section-aware narrowing (`C-x n d`) and `which-function-mode` support
 * Outline minor mode enabled by default -- heading navigation (`C-c C-n/p/f/b/u`) and folding
 * Structural editing -- promote/demote headings (`M-<left>` / `M-<right>`) and move subtrees up/down (`M-<up>` / `M-<down>`)
 * Cross-reference and link navigation -- follow `<<id>>`/`xref:` to their anchors (explicit ids, auto-generated section ids, or natural-title refs), including cross-file `xref:` targets (Antora page IDs and relative paths), and open URLs, via `RET`, mouse, `C-c C-o`, or `xref` (`M-.` / `M-,` with history); `M-?` lists references to the anchor at point; and completion-at-point offers cross-reference ids (in `<<` / `xref:`), attribute names (in `{`), source-block languages (after `[source,`), and file paths (after `include::`)
