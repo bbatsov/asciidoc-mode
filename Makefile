@@ -1,4 +1,4 @@
-.PHONY: all clean compile lint test
+.PHONY: all clean compile grammars lint test
 
 all: clean compile lint test
 
@@ -7,6 +7,10 @@ clean:
 
 compile:
 	eldev compile --warnings-as-errors
+
+# Install (or reinstall) the tree-sitter grammars the tests need.
+grammars:
+	eldev exec "(asciidoc-install-grammars t)"
 
 lint:
 	eldev lint

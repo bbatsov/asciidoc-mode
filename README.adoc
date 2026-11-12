@@ -221,10 +221,11 @@ make all
 make compile   # Byte-compile with warnings-as-errors
 make lint      # Run elisp-lint
 make test      # Run buttercup tests
+make grammars  # Install the tree-sitter grammars the tests need
 make clean     # Remove build artifacts
 ----
 
-NOTE: Font-lock tests require the tree-sitter grammars to be installed. Tests that need grammars will be skipped (not failed) if they are unavailable.
+NOTE: Most tests need the tree-sitter grammars and are skipped (not failed) without them, so a run that reports only a few dozen specs is a run without grammars. `make grammars` installs them. Set `ASCIIDOC_MODE_REQUIRE_GRAMMARS=1` to turn missing grammars into an error, as CI does.
 
 == License
 
