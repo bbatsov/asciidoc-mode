@@ -269,6 +269,12 @@ style (typically a yellow background)."
   "Face for overline role spans (`[.overline]#text#')."
   :group 'asciidoc)
 
+(defface asciidoc-table-header-face
+  '((t :inherit bold))
+  "Face for the header row of a table."
+  :group 'asciidoc
+  :package-version '(asciidoc-mode . "0.5.0"))
+
 (defface asciidoc-markup-face
   '((t :inherit shadow))
   "Face for structural markup that should fade into the background.
@@ -467,28 +473,11 @@ attribute list.  START and END bound the fontified region."
 
    :language 'asciidoc
    :override t
-   :feature 'title
-   ;; The grammar nests the header's `document_attr' entries inside
-   ;; `document_title', so face only the title's marker and its own line --
-   ;; not the whole node, which would bleed the title face onto the
-   ;; `:name: value' attribute lines below the title.
-   '((document_title (title_h0_marker) @asciidoc-document-title-face)
-     (document_title (line) @asciidoc-document-title-face)
-     (title1) @asciidoc-title-1-face
-     (title2) @asciidoc-title-2-face
-     (title3) @asciidoc-title-3-face
-     (title4) @asciidoc-title-4-face
-     (title5) @asciidoc-title-5-face)
-
-   :language 'asciidoc
-   :override t
    :feature 'block
    '((listing_block_body) @asciidoc-code-face
      (literal_block_body) @font-lock-string-face
      (ident_block_line) @font-lock-string-face
-     (block_title) @font-lock-type-face
-     (breaks) @font-lock-comment-delimiter-face
-     (quoted_md_block) @font-lock-doc-face)
+     (breaks) @font-lock-comment-delimiter-face)
 
    :language 'asciidoc
    :override t
@@ -532,7 +521,6 @@ attribute list.  START and END bound the fontified region."
    :override t
    :feature 'attribute
    '((document_attr (attr_name) @asciidoc-metadata-key-face)
-     (document_attr (line) @asciidoc-metadata-value-face)
      (element_attr) @font-lock-preprocessor-face)
 
    :language 'asciidoc
@@ -600,7 +588,41 @@ attribute list.  START and END bound the fontified region."
    :language 'asciidoc-inline
    :feature 'replacement
    '((replacement) @font-lock-escape-face
-     (escaped_sequence) @font-lock-escape-face))
+     (escaped_sequence) @font-lock-escape-face)
+
+   ;; Block-level faces for text that also holds inline content.  These
+   ;; come after the inline rules and are appended, so a `*bold*' or a
+   ;; `code` span inside a title keeps its own face on top of the title's.
+   :language 'asciidoc
+   :override 'append
+   :feature 'title
+   ;; The grammar nests the header's `document_attr' entries inside
+   ;; `document_title', so face only the title's marker and its own line --
+   ;; not the whole node, which would bleed the title face onto the
+   ;; `:name: value' attribute lines below the title.
+   '((document_title (title_h0_marker) @asciidoc-document-title-face)
+     (document_title (line) @asciidoc-document-title-face)
+     (title1) @asciidoc-title-1-face
+     (title2) @asciidoc-title-2-face
+     (title3) @asciidoc-title-3-face
+     (title4) @asciidoc-title-4-face
+     (title5) @asciidoc-title-5-face)
+
+   :language 'asciidoc
+   :override 'append
+   :feature 'block
+   '((block_title) @font-lock-type-face
+     (quoted_md_block) @font-lock-doc-face)
+
+   :language 'asciidoc
+   :override 'append
+   :feature 'table
+   '((table_header_row) @asciidoc-table-header-face)
+
+   :language 'asciidoc
+   :override 'append
+   :feature 'attribute
+   '((document_attr (line) @asciidoc-metadata-value-face)))
   "Tree-sitter font-lock settings for `asciidoc-mode'.")
 
 ;;; Feature list
@@ -1432,6 +1454,15 @@ Install them with \\[asciidoc-install-grammars].
                    (callout_list_item (line) @cap)
                    (description_list_item (line) @cap)
                    (quoted_block (line) @cap)
+                   (quoted_md_block (line) @cap)
+                   (document_title (line) @cap)
+                   (title1 (line) @cap)
+                   (title2 (line) @cap)
+                   (title3 (line) @cap)
+                   (title4 (line) @cap)
+                   (title5 (line) @cap)
+                   (block_title (line) @cap)
+                   (document_attr) @cap
                    (table_cell) @cap
                    (csv_record) @cap
                    (dsv_record) @cap)))

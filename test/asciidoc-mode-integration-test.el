@@ -30,7 +30,7 @@ OCCURRENCE selects which match (default 1)."
   (goto-char (point-min))
   (dotimes (_ (or occurrence 1))
     (search-forward string))
-  (get-text-property (match-beginning 0) 'face))
+  (asciidoc-test-face-at (match-beginning 0)))
 
 ;;; Font-lock integration
 
