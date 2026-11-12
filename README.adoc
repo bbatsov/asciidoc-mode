@@ -187,14 +187,18 @@ Prefer https://www.flycheck.org[Flycheck]? It already bundles built-in `asciidoc
 
 == Design
 
-`asciidoc-mode` uses two tree-sitter parsers from {url-grammar}[bovinemagnet/tree-sitter-asciidoc], each covering the full buffer independently:
+`asciidoc-mode` uses two tree-sitter parsers from {url-grammar}[bovinemagnet/tree-sitter-asciidoc]:
 
 - `asciidoc` -- block-level structure (headings, paragraphs, lists, code blocks, admonitions, attributes, comments, etc.)
 - `asciidoc-inline` -- inline formatting (bold, italic, monospace, links, cross-references, footnotes, macros, replacements, etc.)
 
-The grammar author split them because block-level and inline-level parsing have fundamentally different rules in AsciiDoc, and separating them keeps each grammar simpler. Both parsers operate on the entire buffer without range restrictions -- this is the same dual-parser pattern used by Emacs's built-in `markdown-ts-mode`.
+The grammar author split them because block-level and inline-level parsing have fundamentally different rules in AsciiDoc, and separating them keeps each grammar simpler.
 
-Because both parsers run independently on the same text, they can disagree. In particular, the inline parser misinterprets `*` and `**` list markers as emphasis delimiters, creating spurious emphasis spans that can swallow subsequent inline content (e.g. autolinks). To mitigate this, all block-level font-lock rules use `:override t` so that block-level faces (list markers, headings, code blocks, etc.) always win over incorrect inline faces. This doesn't fix inline elements consumed by the spurious emphasis nodes -- that requires an upstream grammar fix (see {url-repo}/issues/2[#2]).
+The block parser covers the whole buffer. The inline parser doesn't: left to parse everything, it reads `*` and `**` list markers as emphasis delimiters and swallows whatever inline content follows. So it is embedded into the block tree with `treesit-range-rules` and only sees the text that holds inline content -- paragraphs, titles, list items, table cells and the like.
+
+The inline parser reads all of those ranges as one continuous text, which has a consequence worth knowing about: whatever sits between two ranges is invisible to it. If one range ends in `foo` and the next starts with `*bold*`, it sees the single word `foo*bold*`. The range rules therefore capture nodes that include their trailing newline or cell separator.
+
+Titles, block titles and attribute values carry a block-level face _and_ inline markup. Their font-lock rules come after the inline ones and append their face, so a `*bold*` inside a heading keeps both.
 
 A related subtlety: treesit's default font-lock behavior (`:override nil`) skips an entire captured range if _any_ position within it already has a face. This means font-lock rules that capture a broad parent node will silently fail when a child node was already fontified by an earlier rule. To avoid this, inline macro rules capture specific child nodes (`macro_name`, `target`) rather than the whole `inline_macro` node -- the same pattern used for block macros.
 
