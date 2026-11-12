@@ -31,8 +31,9 @@
 ;; - `asciidoc' for block-level structure (sections, lists, blocks)
 ;; - `asciidoc-inline' for inline formatting (bold, italic, links)
 ;;
-;; Both parsers operate on the full buffer independently, similar to
-;; the dual-parser pattern used by `markdown-ts-mode'.
+;; The block parser covers the whole buffer, and the inline parser is
+;; embedded into the parts of it that hold inline content (paragraphs,
+;; titles, list items, table cells).
 ;;
 ;; Features:
 ;; - Syntax highlighting for headings, inline markup, blocks, lists,
@@ -653,12 +654,6 @@ That is the start of the next blank line, or end of buffer."
 
 (defun asciidoc--admonition-label-end (beg)
   "Return the end of the `LABEL:' starting at line position BEG, or nil."
-  ;; TODO: the grammar now emits the label as a node (`admonition_note' and
-  ;; friends span the keyword word, since tree-sitter-asciidoc PR #91), so the
-  ;; label bounds could come from `(treesit-node-child node 0)' plus the `:'
-  ;; instead of this regex.  `asciidoc--admonition-label-regexp' is still needed
-  ;; by `asciidoc--font-lock-extend-region', so it can't go away entirely; the
-  ;; win would be modest.  Left as-is for now.
   (save-excursion
     (goto-char beg)
     (and (looking-at asciidoc--admonition-label-regexp) (match-end 1))))
@@ -1387,7 +1382,7 @@ parser diagnostics into Flymake reports via REPORT-FN.  Add this to
   "Major mode for editing AsciiDoc files, powered by tree-sitter.
 
 Requires two tree-sitter grammars from
-<https://github.com/cathaysia/tree-sitter-asciidoc>.
+<https://github.com/bovinemagnet/tree-sitter-asciidoc>.
 Install them with \\[asciidoc-install-grammars].
 
 \\{asciidoc-mode-map}"
@@ -1404,7 +1399,6 @@ Install them with \\[asciidoc-install-grammars].
   (add-hook 'flymake-diagnostic-functions #'asciidoc-flymake nil t)
 
   (when (asciidoc--ensure-grammars)
-    ;; Create both parsers over the full buffer.
     ;; Create inline parser first so the block parser ends up first
     ;; in `treesit-parser-list' (used by `treesit-buffer-root-node').
     (treesit-parser-create 'asciidoc-inline)
