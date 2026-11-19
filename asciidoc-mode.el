@@ -1690,6 +1690,136 @@ first."
 (put 'asciidoc--preview-after-save 'permanent-local-hook t)
 (put 'asciidoc--preview-delete-browser-file 'permanent-local-hook t)
 
+;;; Inline images
+
+(defcustom asciidoc-max-image-size nil
+  "Largest size at which an image is displayed inline.
+Either nil, which fits images to the window, or a cons (WIDTH . HEIGHT)
+in pixels.  Larger images are scaled down."
+  :type '(choice (const :tag "Fit the window" nil)
+                 (cons (natnum :tag "Width") (natnum :tag "Height")))
+  :group 'asciidoc
+  :package-version '(asciidoc-mode . "0.5.0"))
+
+(defun asciidoc--image-macros ()
+  "Return the image macros in the buffer as a list of (BEG END TARGET).
+Both block (`image::') and inline (`image:') macros are included."
+  (when (treesit-parser-list nil 'asciidoc)
+    ;; The inline parser only knows its ranges once they are computed.
+    (treesit-update-ranges)
+    (let (macros beg end name)
+      (dolist (capture
+               (append
+                (treesit-query-capture
+                 (treesit-buffer-root-node 'asciidoc)
+                 '((block_macro (block_macro_name) @name (target) @target)
+                   @macro))
+                (treesit-query-capture
+                 (treesit-parser-root-node
+                  (car (treesit-parser-list nil 'asciidoc-inline)))
+                 '((inline_macro (macro_name) @name (target) @target)
+                   @macro))))
+        (let ((node (cdr capture)))
+          (pcase (car capture)
+            ('macro (setq beg (treesit-node-start node)
+                          end (treesit-node-end node)
+                          name nil))
+            ('name (setq name (treesit-node-text node t)))
+            ('target
+             (when (equal name "image")
+               ;; A block macro node takes in the newline that ends it.
+               (when (eq (char-before end) ?\n)
+                 (setq end (1- end)))
+               (push (list beg end (treesit-node-text node t)) macros))))))
+      (nreverse macros))))
+
+(defun asciidoc--image-file (target)
+  "Return the local file image TARGET refers to, or nil.
+A relative TARGET is looked up in the document's `imagesdir', in the
+module's `images' directory for an Antora page, and next to the document
+otherwise.  URLs and files that do not exist yield nil."
+  (unless (or (file-remote-p default-directory)
+              (string-match-p "\\`[a-z][a-z0-9+.-]*:\\(?://\\|[^/\\\\]\\)"
+                              target))
+    (let* ((imagesdir (asciidoc--doc-attribute "imagesdir" ""))
+           (antora (asciidoc--antora-context))
+           (dir (cond ((not (string-empty-p imagesdir))
+                       (expand-file-name imagesdir))
+                      (antora
+                       (expand-file-name
+                        (concat "modules/" (plist-get antora :module)
+                                "/images")
+                        (plist-get antora :root)))
+                      (t default-directory)))
+           (file (expand-file-name target dir)))
+      (and (file-regular-p file) (file-readable-p file) file))))
+
+(defun asciidoc--image-overlay-modified (overlay after &rest _)
+  "Delete OVERLAY when the image macro it covers is about to be edited.
+AFTER is non-nil when called after the change, which is too late to
+matter."
+  (unless after
+    (delete-overlay overlay)))
+
+(defun asciidoc-remove-inline-images ()
+  "Stop displaying images inline, showing the image macros again."
+  (interactive)
+  (save-restriction
+    (widen)
+    (remove-overlays nil nil 'asciidoc-inline-image t)))
+
+(defun asciidoc-display-inline-images ()
+  "Display the images that the buffer's image macros point to.
+Each `image::' or `image:' macro whose target is a local file is shown
+as that image; editing a macro brings its text back.  Images on the web
+are left alone.  See `asciidoc-max-image-size' for scaling."
+  (interactive)
+  (unless (display-images-p)
+    (user-error "This display cannot show images"))
+  (unless (treesit-parser-list nil 'asciidoc)
+    (user-error "Displaying images needs the AsciiDoc grammars"))
+  (save-restriction
+    (widen)
+    (asciidoc-remove-inline-images)
+    (let* ((win (get-buffer-window nil t))
+           (max-width (or (car asciidoc-max-image-size)
+                          (and win (window-body-width win t))))
+           (max-height (or (cdr asciidoc-max-image-size)
+                           (and win (window-body-height win t))))
+           (count 0))
+      (pcase-dolist (`(,beg ,end ,target) (asciidoc--image-macros))
+        (when-let* ((file (asciidoc--image-file target))
+                    (image (ignore-errors
+                             (create-image file nil nil
+                                           :max-width max-width
+                                           :max-height max-height))))
+          ;; Pick up a file that changed since it was last displayed.  The
+          ;; function is missing from an Emacs built without image support.
+          (when (fboundp 'image-flush)
+            (image-flush image))
+          (setq count (1+ count))
+          (let ((ov (make-overlay beg end nil t)))
+            (overlay-put ov 'asciidoc-inline-image t)
+            (overlay-put ov 'display image)
+            (overlay-put ov 'evaporate t)
+            (overlay-put ov 'help-echo file)
+            (overlay-put ov 'modification-hooks
+                         '(asciidoc--image-overlay-modified)))))
+      (message (if (zerop count)
+                   "No local images to display"
+                 "Displaying %d image%s")
+               count (if (= count 1) "" "s")))))
+
+(defun asciidoc-toggle-inline-images ()
+  "Turn the inline display of images on or off."
+  (interactive)
+  (if (seq-some (lambda (ov) (overlay-get ov 'asciidoc-inline-image))
+                (save-restriction
+                  (widen)
+                  (overlays-in (point-min) (point-max))))
+      (asciidoc-remove-inline-images)
+    (asciidoc-display-inline-images)))
+
 ;;; Mode definition
 
 ;;;###autoload
@@ -1840,6 +1970,7 @@ Install them with \\[asciidoc-install-grammars].
 (keymap-set asciidoc-mode-map "C-c C-o" #'asciidoc-follow-reference-at-point)
 (keymap-set asciidoc-mode-map "C-c C-c p" #'asciidoc-preview)
 (keymap-set asciidoc-mode-map "C-c C-c b" #'asciidoc-preview-in-browser)
+(keymap-set asciidoc-mode-map "C-c C-x C-i" #'asciidoc-toggle-inline-images)
 ;; `narrow-to-defun' would narrow to the heading line alone.
 (keymap-set asciidoc-mode-map "<remap> <narrow-to-defun>"
             #'asciidoc-narrow-to-section)
@@ -1877,7 +2008,10 @@ Install them with \\[asciidoc-install-grammars].
      ["Mark Subtree" outline-mark-subtree])
     ("Preview"
      ["Preview" asciidoc-preview]
-     ["Preview in Browser" asciidoc-preview-in-browser])
+     ["Preview in Browser" asciidoc-preview-in-browser]
+     "---"
+     ["Toggle Inline Images" asciidoc-toggle-inline-images
+      :enable (display-images-p)])
     "---"
     ["Comment/Uncomment Region" comment-dwim]
     ["Narrow to Section" asciidoc-narrow-to-section]

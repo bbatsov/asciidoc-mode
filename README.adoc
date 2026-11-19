@@ -21,6 +21,7 @@ A tree-sitter-based major mode for editing https://asciidoc.org[AsciiDoc] files 
 * Cross-reference and link navigation -- follow `<<id>>`/`xref:` to their anchors (explicit ids, auto-generated section ids, or natural-title refs), including cross-file `xref:` targets (Antora page IDs and relative paths), and open URLs, via `RET`, mouse, `C-c C-o`, or `xref` (`M-.` / `M-,` with history); `M-?` lists references to the anchor at point; and completion-at-point offers cross-reference ids (in `<<` / `xref:`), attribute names (in `{`), source-block languages (after `[source,`), and file paths (after `include::`)
 * On-the-fly validation -- a Flymake backend runs the buffer through Asciidoctor and reports its warnings and errors inline (`M-x flymake-mode`)
 * Rendered preview -- see the document as Asciidoctor renders it, inside Emacs (`C-c C-c p`) or in a browser (`C-c C-c b`)
+* Inline images -- show the images behind `image::` and `image:` macros in the buffer (`C-c C-x C-i`)
 * Comment support (`//` line comments)
 * Graceful degradation -- works as basic `text-mode` when grammars are unavailable
 
@@ -71,7 +72,7 @@ I named it `asciidoc-mode` instead of `adoc-ts-mode` because it shares nothing w
 | Yes
 
 | Inline image preview
-| No
+| Yes
 | Yes
 
 | Rendered preview
@@ -198,6 +199,8 @@ Prefer https://www.flycheck.org[Flycheck]? It already bundles built-in `asciidoc
 The preview is drawn by `shr`, the HTML renderer behind `eww`. It handles headings, lists, tables, images and links, and it works in a terminal, but it knows nothing about CSS, so don't expect the page to look like Asciidoctor's default theme. For that there's `C-c C-c b` (`asciidoc-preview-in-browser`), which opens the fully styled page in your browser.
 
 Both commands need `asciidoctor` (see `asciidoc-asciidoctor-command`), and the first one an Emacs built with libxml2.
+
+`C-c C-x C-i` (`asciidoc-toggle-inline-images`) is a lighter alternative that needs no external tools: it displays local images right in the buffer, in place of their `image::` and `image:` macros. Relative targets are looked up in the document's `imagesdir`, or in the module's `images` directory in an Antora project. Editing a macro brings its text back, and `asciidoc-max-image-size` caps how large images get.
 
 == Design
 

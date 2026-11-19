@@ -1356,6 +1356,11 @@ The directory is bound to `dir' in BODY and removed afterwards."
 shr fills to the window, which is only a few columns wide in batch mode."
   (string-join (split-string (buffer-string)) " "))
 
+(defun asciidoc-test-image-overlays ()
+  "Return the inline image overlays in the current buffer."
+  (seq-filter (lambda (ov) (overlay-get ov 'asciidoc-inline-image))
+              (overlays-in (point-min) (point-max))))
+
 (describe "Preview"
   (it "renders HTML with shr and keeps point where it was"
     (assume (libxml-available-p) "libxml2 not available")
@@ -1507,6 +1512,130 @@ shr fills to the window, which is only a few columns wide in batch mode."
         (kill-buffer buf)
         (expect (file-exists-p file) :to-be nil)))))
 
+;;; Inline images
+
+(describe "Inline images"
+  (it "finds block and inline image macros, but not other macros"
+    (asciidoc-test-assume-grammars)
+    (with-asciidoc-buffer
+        (concat "= Doc\n\nimage::sunset.jpg[Sunset,300,200]\n\n"
+                "Text image:icon.png[] and kbd:[F1].\n\n"
+                "* item image:b.png[x]\n\n"
+                "video::clip.mp4[]\n")
+      (let ((macros (asciidoc--image-macros)))
+        (expect (mapcar #'caddr macros)
+                :to-have-same-items-as '("sunset.jpg" "icon.png" "b.png"))
+        (pcase-dolist (`(,beg ,end ,target) macros)
+          (expect (buffer-substring beg end)
+                  :to-match (concat "\\`image::?" (regexp-quote target)
+                                    "\\[.*\\]\\'"))))))
+
+  (it "ignores image macros inside listing blocks"
+    (asciidoc-test-assume-grammars)
+    (with-asciidoc-buffer "= Doc\n\n----\nimage::no.png[]\n----\n"
+      (expect (asciidoc--image-macros) :to-be nil)))
+
+  (it "resolves targets next to the document or in imagesdir"
+    (asciidoc-test-with-file-buffer "= Doc\n"
+      (make-directory (expand-file-name "img" dir))
+      (write-region "" nil (expand-file-name "a.png" dir))
+      (write-region "" nil (expand-file-name "img/b.png" dir))
+      (expect (asciidoc--image-file "a.png")
+              :to-equal (expand-file-name "a.png" dir))
+      (expect (asciidoc--image-file "b.png") :to-be nil)
+      (expect (asciidoc--image-file "img") :to-be nil)
+      (expect (asciidoc--image-file "https://example.com/a.png") :to-be nil)
+      (expect (asciidoc--image-file "data:image/png;base64,AAAA") :to-be nil)
+      (goto-char (point-max))
+      (insert ":imagesdir: img\n")
+      (expect (asciidoc--image-file "b.png")
+              :to-equal (expand-file-name "img/b.png" dir))))
+
+  (it "resolves targets in an Antora module's images directory"
+    (asciidoc-test-with-file-buffer "= Doc\n"
+      (make-directory (expand-file-name "modules/ROOT/pages" dir) t)
+      (make-directory (expand-file-name "modules/ROOT/images" dir) t)
+      (write-region "name: demo\n" nil (expand-file-name "antora.yml" dir))
+      (write-region "" nil (expand-file-name "modules/ROOT/images/a.png" dir))
+      (setq buffer-file-name
+            (expand-file-name "modules/ROOT/pages/index.adoc" dir)
+            default-directory (file-name-directory buffer-file-name))
+      (expect (asciidoc--image-file "a.png")
+              :to-equal (expand-file-name "modules/ROOT/images/a.png" dir))))
+
+  (it "refuses to display images where the display cannot show them"
+    (spy-on 'display-images-p :and-return-value nil)
+    (with-temp-buffer
+      (expect (asciidoc-display-inline-images) :to-throw 'user-error)))
+
+  (it "refuses to display images without the grammars"
+    (spy-on 'display-images-p :and-return-value t)
+    (with-temp-buffer
+      (expect (asciidoc-display-inline-images) :to-throw 'user-error)))
+
+  (describe "on a graphical display"
+    (before-each
+      (spy-on 'display-images-p :and-return-value t)
+      (spy-on 'image-flush)
+      (spy-on 'message)
+      (spy-on 'create-image :and-call-fake
+              (lambda (file &rest _) (list 'image :file file))))
+
+    (it "shows local images over their macros and toggles them off again"
+      (asciidoc-test-assume-grammars)
+      (asciidoc-test-with-file-buffer
+          (concat "= Doc\n\nimage::a.png[A]\n\nimage::missing.png[]\n\n"
+                  "See image:https://example.com/x.png[].\n")
+        (write-region "" nil (expand-file-name "a.png" dir))
+        (asciidoc-mode)
+        (asciidoc-toggle-inline-images)
+        (let ((ovs (asciidoc-test-image-overlays)))
+          (expect (length ovs) :to-equal 1)
+          (expect (buffer-substring (overlay-start (car ovs))
+                                    (overlay-end (car ovs)))
+                  :to-equal "image::a.png[A]")
+          (expect (overlay-get (car ovs) 'display)
+                  :to-equal (list 'image
+                                  :file (expand-file-name "a.png" dir))))
+        (asciidoc-toggle-inline-images)
+        (expect (asciidoc-test-image-overlays) :to-be nil)))
+
+    (it "removes images outside a narrowing too"
+      (asciidoc-test-assume-grammars)
+      (asciidoc-test-with-file-buffer
+          "= Doc\n\n== One\n\nimage::a.png[A]\n\n== Two\n\nimage::a.png[B]\n"
+        (write-region "" nil (expand-file-name "a.png" dir))
+        (asciidoc-mode)
+        (asciidoc-display-inline-images)
+        (expect (length (asciidoc-test-image-overlays)) :to-equal 2)
+        (goto-char (point-max))
+        (asciidoc-narrow-to-section)
+        (asciidoc-toggle-inline-images)
+        (widen)
+        (expect (asciidoc-test-image-overlays) :to-be nil)))
+
+    (it "passes the configured maximum size on"
+      (asciidoc-test-assume-grammars)
+      (asciidoc-test-with-file-buffer "= Doc\n\nimage::a.png[A]\n"
+        (write-region "" nil (expand-file-name "a.png" dir))
+        (asciidoc-mode)
+        (let ((asciidoc-max-image-size '(320 . 200)))
+          (asciidoc-display-inline-images))
+        (expect (cdddr (spy-calls-args-for 'create-image 0))
+                :to-equal '(:max-width 320 :max-height 200))))
+
+    (it "brings the macro text back when it is edited"
+      (asciidoc-test-assume-grammars)
+      (asciidoc-test-with-file-buffer "= Doc\n\nimage::a.png[A]\n"
+        (write-region "" nil (expand-file-name "a.png" dir))
+        (asciidoc-mode)
+        (asciidoc-display-inline-images)
+        (expect (length (asciidoc-test-image-overlays)) :to-equal 1)
+        (goto-char (point-min))
+        (search-forward "[A")
+        (insert "n image")
+        (expect (asciidoc-test-image-overlays) :to-be nil)))))
+
 ;;; Filling
 
 (describe "Filling"
@@ -1571,11 +1700,13 @@ shr fills to the window, which is only a few columns wide in batch mode."
     (expect (keymap-lookup asciidoc-mode-map "C-c C-u")
             :to-be 'outline-up-heading))
 
-  (it "binds the preview commands"
+  (it "binds the preview and inline image commands"
     (expect (keymap-lookup asciidoc-mode-map "C-c C-c p")
             :to-be 'asciidoc-preview)
     (expect (keymap-lookup asciidoc-mode-map "C-c C-c b")
-            :to-be 'asciidoc-preview-in-browser)))
+            :to-be 'asciidoc-preview-in-browser)
+    (expect (keymap-lookup asciidoc-mode-map "C-c C-x C-i")
+            :to-be 'asciidoc-toggle-inline-images)))
 
 (provide 'asciidoc-mode-test)
 ;;; asciidoc-mode-test.el ends here
