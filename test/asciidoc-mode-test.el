@@ -1324,6 +1324,318 @@
             (expect (> (length result) 0) :to-be-truthy))
         (when (buffer-live-p buf) (kill-buffer buf))))))
 
+;;; Preview
+
+(defun asciidoc-test-wait-for (predicate)
+  "Wait up to ten seconds for PREDICATE to return non-nil."
+  (let ((n 0))
+    (while (and (not (funcall predicate)) (< n 100))
+      (accept-process-output nil 0.1)
+      (setq n (1+ n)))))
+
+(defmacro asciidoc-test-with-file-buffer (content &rest body)
+  "Run BODY in a buffer holding CONTENT that visits a file in a fresh directory.
+The directory is bound to `dir' in BODY and removed afterwards."
+  (declare (indent 1) (debug t))
+  `(let* ((dir (file-name-as-directory (make-temp-file "asciidoc-test" t)))
+          (buf (generate-new-buffer "preview-test.adoc")))
+     (unwind-protect
+         (with-current-buffer buf
+           (setq buffer-file-name (expand-file-name "preview-test.adoc" dir)
+                 default-directory dir)
+           (insert ,content)
+           (set-buffer-modified-p nil)
+           ,@body)
+       (when (buffer-live-p buf)
+         (with-current-buffer buf (set-buffer-modified-p nil))
+         (kill-buffer buf))
+       (delete-directory dir t))))
+
+(defun asciidoc-test-flat-text ()
+  "Return the current buffer's text with runs of whitespace collapsed.
+shr fills to the window, which is only a few columns wide in batch mode."
+  (string-join (split-string (buffer-string)) " "))
+
+(defun asciidoc-test-image-overlays ()
+  "Return the inline image overlays in the current buffer."
+  (seq-filter (lambda (ov) (overlay-get ov 'asciidoc-inline-image))
+              (overlays-in (point-min) (point-max))))
+
+(describe "Preview"
+  (it "renders HTML with shr and keeps point where it was"
+    (assume (libxml-available-p) "libxml2 not available")
+    (let ((file (make-temp-file "asciidoc-test" nil ".html"))
+          (source (current-buffer)))
+      (unwind-protect
+          (with-temp-buffer
+            (with-temp-file file
+              (insert "<html><body><h1>Title</h1><p>Some <b>bold</b> text.</p>"
+                      "</body></html>"))
+            (asciidoc--preview-render file source)
+            (expect (asciidoc-test-flat-text)
+                    :to-equal "Title Some bold text.")
+            (goto-char 4)
+            (asciidoc--preview-render file source)
+            (expect (point) :to-equal 4))
+        (delete-file file))))
+
+  (it "renders the buffer into a preview buffer end to end"
+    (assume (executable-find asciidoc-asciidoctor-command)
+            "asciidoctor not installed")
+    (assume (libxml-available-p) "libxml2 not available")
+    (asciidoc-test-with-file-buffer "= Doc Title\n\nSome *bold* text.\n"
+      (let (preview)
+        (unwind-protect
+            (progn
+              (asciidoc--preview-update)
+              (asciidoc-test-wait-for
+               (lambda () (setq preview asciidoc--preview-buffer)))
+              (expect (buffer-live-p preview) :to-be-truthy)
+              (with-current-buffer preview
+                (expect major-mode :to-be 'asciidoc-preview-mode)
+                (expect asciidoc--preview-source :to-be buf)
+                (expect (asciidoc-test-flat-text)
+                        :to-equal "Doc Title Some bold text.")))
+          (when (buffer-live-p preview) (kill-buffer preview))))))
+
+  (it "previews unsaved edits"
+    (assume (executable-find asciidoc-asciidoctor-command)
+            "asciidoctor not installed")
+    (assume (libxml-available-p) "libxml2 not available")
+    (asciidoc-test-with-file-buffer "= Doc Title\n"
+      (let (preview)
+        (unwind-protect
+            (progn
+              (goto-char (point-max))
+              (insert "\nNot saved yet.\n")
+              (asciidoc--preview-update)
+              (asciidoc-test-wait-for
+               (lambda () (setq preview asciidoc--preview-buffer)))
+              (expect (with-current-buffer preview (asciidoc-test-flat-text))
+                      :to-match "Not saved yet\\."))
+          (when (buffer-live-p preview) (kill-buffer preview))))))
+
+  (it "reports an Asciidoctor failure instead of rendering"
+    (assume (executable-find "false") "no `false' executable")
+    (spy-on 'message)
+    (let ((asciidoc-asciidoctor-command "false")
+          called)
+      (with-temp-buffer
+        (insert "= T\n")
+        (asciidoc--convert-to-html "/nonexistent/out.html" nil
+                                   (lambda (ok) (setq called (list ok))))
+        (asciidoc-test-wait-for (lambda () called))
+        (expect called :to-equal '(nil))
+        (expect 'message :to-have-been-called))))
+
+  (it "makes a new preview buffer when the old one was killed"
+    (assume (executable-find asciidoc-asciidoctor-command)
+            "asciidoctor not installed")
+    (assume (libxml-available-p) "libxml2 not available")
+    (asciidoc-test-with-file-buffer "= Doc Title\n"
+      (let ((dead (generate-new-buffer " *dead*")))
+        (kill-buffer dead)
+        (setq asciidoc--preview-buffer dead)
+        (asciidoc--preview-update)
+        (asciidoc-test-wait-for (lambda () (asciidoc--preview-live-buffer)))
+        (let ((preview (asciidoc--preview-live-buffer)))
+          (expect preview :to-be-truthy)
+          (expect (with-current-buffer preview (asciidoc-test-flat-text))
+                  :to-equal "Doc Title")
+          (kill-buffer preview)))))
+
+  (it "keeps its state when the major mode is set up again"
+    (with-temp-buffer
+      (let ((preview (generate-new-buffer " *preview*")))
+        (unwind-protect
+            (progn
+              (setq asciidoc--preview-buffer preview)
+              (add-hook 'after-save-hook #'asciidoc--preview-after-save nil t)
+              (asciidoc-mode)
+              (expect asciidoc--preview-buffer :to-be preview)
+              (expect (memq #'asciidoc--preview-after-save after-save-hook)
+                      :to-be-truthy))
+          (kill-buffer preview)))))
+
+  (it "refuses to preview a remote buffer"
+    (with-temp-buffer
+      (setq default-directory "/ssh:example.invalid:/tmp/")
+      (expect (asciidoc--preview-check) :to-throw 'user-error)))
+
+  (it "refreshes a live preview on save, unless told not to"
+    (spy-on 'asciidoc--preview-update)
+    (with-temp-buffer
+      (let ((preview (generate-new-buffer " *preview*")))
+        (unwind-protect
+            (progn
+              (asciidoc--preview-after-save)
+              (expect 'asciidoc--preview-update :not :to-have-been-called)
+              (setq asciidoc--preview-buffer preview)
+              (let ((asciidoc-preview-refresh-on-save nil))
+                (asciidoc--preview-after-save))
+              (expect 'asciidoc--preview-update :not :to-have-been-called)
+              (asciidoc--preview-after-save)
+              (expect 'asciidoc--preview-update :to-have-been-called-times 1))
+          (kill-buffer preview))
+        ;; A killed preview buffer is not brought back by saving.
+        (asciidoc--preview-after-save)
+        (expect 'asciidoc--preview-update :to-have-been-called-times 1))))
+
+  (it "re-renders from the preview buffer and complains when the source is gone"
+    (spy-on 'asciidoc--preview-update)
+    (let ((source (generate-new-buffer " *source*")))
+      (with-temp-buffer
+        (asciidoc-preview-mode)
+        (setq asciidoc--preview-source source)
+        (revert-buffer)
+        (expect 'asciidoc--preview-update :to-have-been-called-times 1)
+        (kill-buffer source)
+        (expect (revert-buffer) :to-throw 'user-error))))
+
+  (it "hands a self-contained page to the browser and cleans it up"
+    (assume (executable-find asciidoc-asciidoctor-command)
+            "asciidoctor not installed")
+    (spy-on 'browse-url)
+    (asciidoc-test-with-file-buffer "= Doc Title\n\nSome *bold* text.\n"
+      (asciidoc-preview-in-browser)
+      (asciidoc-test-wait-for
+       (lambda () (> (length (spy-calls-all 'browse-url)) 0)))
+      (expect 'browse-url :to-have-been-called-times 1)
+      (let ((file asciidoc--preview-browser-file))
+        (expect (spy-calls-args-for 'browse-url 0)
+                :to-equal (list (browse-url-file-url file)))
+        (expect (with-temp-buffer
+                  (insert-file-contents file)
+                  (buffer-string))
+                :to-match "<strong>bold</strong>")
+        (set-buffer-modified-p nil)
+        (kill-buffer buf)
+        (expect (file-exists-p file) :to-be nil)))))
+
+;;; Inline images
+
+(describe "Inline images"
+  (it "finds block and inline image macros, but not other macros"
+    (asciidoc-test-assume-grammars)
+    (with-asciidoc-buffer
+        (concat "= Doc\n\nimage::sunset.jpg[Sunset,300,200]\n\n"
+                "Text image:icon.png[] and kbd:[F1].\n\n"
+                "* item image:b.png[x]\n\n"
+                "video::clip.mp4[]\n")
+      (let ((macros (asciidoc--image-macros)))
+        (expect (mapcar #'caddr macros)
+                :to-have-same-items-as '("sunset.jpg" "icon.png" "b.png"))
+        (pcase-dolist (`(,beg ,end ,target) macros)
+          (expect (buffer-substring beg end)
+                  :to-match (concat "\\`image::?" (regexp-quote target)
+                                    "\\[.*\\]\\'"))))))
+
+  (it "ignores image macros inside listing blocks"
+    (asciidoc-test-assume-grammars)
+    (with-asciidoc-buffer "= Doc\n\n----\nimage::no.png[]\n----\n"
+      (expect (asciidoc--image-macros) :to-be nil)))
+
+  (it "resolves targets next to the document or in imagesdir"
+    (asciidoc-test-with-file-buffer "= Doc\n"
+      (make-directory (expand-file-name "img" dir))
+      (write-region "" nil (expand-file-name "a.png" dir))
+      (write-region "" nil (expand-file-name "img/b.png" dir))
+      (expect (asciidoc--image-file "a.png")
+              :to-equal (expand-file-name "a.png" dir))
+      (expect (asciidoc--image-file "b.png") :to-be nil)
+      (expect (asciidoc--image-file "img") :to-be nil)
+      (expect (asciidoc--image-file "https://example.com/a.png") :to-be nil)
+      (expect (asciidoc--image-file "data:image/png;base64,AAAA") :to-be nil)
+      (goto-char (point-max))
+      (insert ":imagesdir: img\n")
+      (expect (asciidoc--image-file "b.png")
+              :to-equal (expand-file-name "img/b.png" dir))))
+
+  (it "resolves targets in an Antora module's images directory"
+    (asciidoc-test-with-file-buffer "= Doc\n"
+      (make-directory (expand-file-name "modules/ROOT/pages" dir) t)
+      (make-directory (expand-file-name "modules/ROOT/images" dir) t)
+      (write-region "name: demo\n" nil (expand-file-name "antora.yml" dir))
+      (write-region "" nil (expand-file-name "modules/ROOT/images/a.png" dir))
+      (setq buffer-file-name
+            (expand-file-name "modules/ROOT/pages/index.adoc" dir)
+            default-directory (file-name-directory buffer-file-name))
+      (expect (asciidoc--image-file "a.png")
+              :to-equal (expand-file-name "modules/ROOT/images/a.png" dir))))
+
+  (it "refuses to display images where the display cannot show them"
+    (spy-on 'display-images-p :and-return-value nil)
+    (with-temp-buffer
+      (expect (asciidoc-display-inline-images) :to-throw 'user-error)))
+
+  (it "refuses to display images without the grammars"
+    (spy-on 'display-images-p :and-return-value t)
+    (with-temp-buffer
+      (expect (asciidoc-display-inline-images) :to-throw 'user-error)))
+
+  (describe "on a graphical display"
+    (before-each
+      (spy-on 'display-images-p :and-return-value t)
+      (spy-on 'image-flush)
+      (spy-on 'message)
+      (spy-on 'create-image :and-call-fake
+              (lambda (file &rest _) (list 'image :file file))))
+
+    (it "shows local images over their macros and toggles them off again"
+      (asciidoc-test-assume-grammars)
+      (asciidoc-test-with-file-buffer
+          (concat "= Doc\n\nimage::a.png[A]\n\nimage::missing.png[]\n\n"
+                  "See image:https://example.com/x.png[].\n")
+        (write-region "" nil (expand-file-name "a.png" dir))
+        (asciidoc-mode)
+        (asciidoc-toggle-inline-images)
+        (let ((ovs (asciidoc-test-image-overlays)))
+          (expect (length ovs) :to-equal 1)
+          (expect (buffer-substring (overlay-start (car ovs))
+                                    (overlay-end (car ovs)))
+                  :to-equal "image::a.png[A]")
+          (expect (overlay-get (car ovs) 'display)
+                  :to-equal (list 'image
+                                  :file (expand-file-name "a.png" dir))))
+        (asciidoc-toggle-inline-images)
+        (expect (asciidoc-test-image-overlays) :to-be nil)))
+
+    (it "removes images outside a narrowing too"
+      (asciidoc-test-assume-grammars)
+      (asciidoc-test-with-file-buffer
+          "= Doc\n\n== One\n\nimage::a.png[A]\n\n== Two\n\nimage::a.png[B]\n"
+        (write-region "" nil (expand-file-name "a.png" dir))
+        (asciidoc-mode)
+        (asciidoc-display-inline-images)
+        (expect (length (asciidoc-test-image-overlays)) :to-equal 2)
+        (goto-char (point-max))
+        (asciidoc-narrow-to-section)
+        (asciidoc-toggle-inline-images)
+        (widen)
+        (expect (asciidoc-test-image-overlays) :to-be nil)))
+
+    (it "passes the configured maximum size on"
+      (asciidoc-test-assume-grammars)
+      (asciidoc-test-with-file-buffer "= Doc\n\nimage::a.png[A]\n"
+        (write-region "" nil (expand-file-name "a.png" dir))
+        (asciidoc-mode)
+        (let ((asciidoc-max-image-size '(320 . 200)))
+          (asciidoc-display-inline-images))
+        (expect (cdddr (spy-calls-args-for 'create-image 0))
+                :to-equal '(:max-width 320 :max-height 200))))
+
+    (it "brings the macro text back when it is edited"
+      (asciidoc-test-assume-grammars)
+      (asciidoc-test-with-file-buffer "= Doc\n\nimage::a.png[A]\n"
+        (write-region "" nil (expand-file-name "a.png" dir))
+        (asciidoc-mode)
+        (asciidoc-display-inline-images)
+        (expect (length (asciidoc-test-image-overlays)) :to-equal 1)
+        (goto-char (point-min))
+        (search-forward "[A")
+        (insert "n image")
+        (expect (asciidoc-test-image-overlays) :to-be nil)))))
+
 ;;; Filling
 
 (describe "Filling"
@@ -1386,7 +1698,15 @@
     (expect (keymap-lookup asciidoc-mode-map "C-c C-n")
             :to-be 'outline-next-visible-heading)
     (expect (keymap-lookup asciidoc-mode-map "C-c C-u")
-            :to-be 'outline-up-heading)))
+            :to-be 'outline-up-heading))
+
+  (it "binds the preview and inline image commands"
+    (expect (keymap-lookup asciidoc-mode-map "C-c C-c p")
+            :to-be 'asciidoc-preview)
+    (expect (keymap-lookup asciidoc-mode-map "C-c C-c b")
+            :to-be 'asciidoc-preview-in-browser)
+    (expect (keymap-lookup asciidoc-mode-map "C-c C-x C-i")
+            :to-be 'asciidoc-toggle-inline-images)))
 
 (provide 'asciidoc-mode-test)
 ;;; asciidoc-mode-test.el ends here

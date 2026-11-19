@@ -1375,13 +1375,15 @@ own mouse keymap would otherwise shadow `asciidoc-follow-reference-at-point'."
 ;;; Flymake
 
 (defcustom asciidoc-asciidoctor-command "asciidoctor"
-  "Executable used by the Asciidoctor-backed Flymake checker."
+  "Executable used to run Asciidoctor.
+The Flymake checker and the preview commands use it."
   :type 'string
   :group 'asciidoc
   :package-version '(asciidoc-mode . "0.4.0"))
 
 (defcustom asciidoc-asciidoctor-extra-args nil
-  "Extra command-line arguments passed to Asciidoctor by the Flymake checker."
+  "Extra command-line arguments passed to Asciidoctor.
+They apply to the Flymake checker and to the preview commands."
   :type '(repeat string)
   :group 'asciidoc
   :package-version '(asciidoc-mode . "0.4.0"))
@@ -1469,6 +1471,354 @@ parser diagnostics into Flymake reports via REPORT-FN.  Add this to
               (kill-buffer (process-buffer proc)))))))
       (process-send-region asciidoc--flymake-proc (point-min) (point-max))
       (process-send-eof asciidoc--flymake-proc))))
+
+;;; Preview
+
+(defcustom asciidoc-preview-refresh-on-save t
+  "Whether saving a buffer refreshes its live preview buffer.
+Only a buffer whose preview (see `asciidoc-preview') is still around is
+affected."
+  :type 'boolean
+  :group 'asciidoc
+  :package-version '(asciidoc-mode . "0.5.0"))
+
+(defvar-local asciidoc--preview-proc nil
+  "The most recent Asciidoctor preview process for this buffer.")
+
+(declare-function shr-insert-document "shr")
+(declare-function dom-by-tag "dom")
+(declare-function browse-url-file-url "browse-url")
+
+(defvar-local asciidoc--preview-buffer nil
+  "The buffer showing the rendered preview of this buffer.")
+
+(defvar-local asciidoc--preview-source nil
+  "In a preview buffer, the AsciiDoc buffer it renders.")
+
+(defvar-local asciidoc--preview-browser-file nil
+  "The HTML file last handed to the browser for this buffer.")
+
+(defun asciidoc--preview-check ()
+  "Signal a `user-error' if the current buffer cannot be previewed."
+  (when (file-remote-p default-directory)
+    (user-error "Previewing remote files is not supported"))
+  (unless (executable-find asciidoc-asciidoctor-command)
+    (user-error "Cannot find the Asciidoctor executable %S"
+                asciidoc-asciidoctor-command)))
+
+(defun asciidoc--convert-to-html (file args callback)
+  "Convert the current buffer to HTML in FILE with Asciidoctor.
+The buffer's contents, saved or not, go to Asciidoctor over its standard
+input.  ARGS are extra command-line arguments.  CALLBACK is called with
+one argument once Asciidoctor is done: non-nil if FILE was written, nil
+if the run failed or was killed.  A failure is reported in the echo area.
+Return the process."
+  (save-restriction
+    (widen)
+    (let ((proc
+           (make-process
+            :name "asciidoc-preview" :noquery t :connection-type 'pipe
+            :coding 'utf-8
+            :buffer (generate-new-buffer " *asciidoc-preview*" t)
+            :command (append (list asciidoc-asciidoctor-command)
+                             args
+                             asciidoc-asciidoctor-extra-args
+                             (list "-B" (expand-file-name default-directory)
+                                   "-o" file "-"))
+            :sentinel
+            (lambda (proc _event)
+              (when (memq (process-status proc) '(exit signal))
+                (let ((output (with-current-buffer (process-buffer proc)
+                                (string-trim (buffer-string))))
+                      (exited (eq (process-status proc) 'exit)))
+                  (kill-buffer (process-buffer proc))
+                  (if (and exited (zerop (process-exit-status proc)))
+                      (funcall callback t)
+                    ;; A killed process was replaced by a newer run, which
+                    ;; is nothing to report.
+                    (when exited
+                      (message "Asciidoctor failed: %s"
+                               (car (split-string output "\n"))))
+                    (funcall callback nil))))))))
+      (process-send-region proc (point-min) (point-max))
+      (process-send-eof proc)
+      proc)))
+
+(defun asciidoc--preview-render (file source)
+  "Render the HTML in FILE into the current buffer, the preview of SOURCE.
+Windows showing the buffer stay where they were scrolled to."
+  (require 'shr)
+  (require 'dom)
+  (require 'browse-url)
+  (let* ((dom (with-temp-buffer
+                (insert-file-contents file)
+                (libxml-parse-html-region (point-min) (point-max))))
+         (base (browse-url-file-url
+                (buffer-local-value 'default-directory source)))
+         (windows (mapcar (lambda (win)
+                            (list win (window-start win) (window-point win)))
+                          (get-buffer-window-list nil nil t)))
+         (point (point))
+         (inhibit-read-only t))
+    (erase-buffer)
+    ;; A `base' element makes shr resolve relative image and link targets
+    ;; against the source's directory.  Only the body is rendered: shr would
+    ;; show the document's title a second time for the `title' element.
+    (shr-insert-document `(base ((href . ,base)) ,@(dom-by-tag dom 'body)))
+    (goto-char (min point (point-max)))
+    (pcase-dolist (`(,win ,start ,pos) windows)
+      (set-window-start win (min start (point-max)))
+      (set-window-point win (min pos (point-max))))))
+
+(defun asciidoc--preview-update (&optional show)
+  "Render the current buffer into its preview buffer.
+With SHOW non-nil, display the preview buffer too."
+  (asciidoc--preview-check)
+  (unless (libxml-available-p)
+    (user-error "The preview needs an Emacs built with libxml2"))
+  (when (process-live-p asciidoc--preview-proc)
+    (delete-process asciidoc--preview-proc))
+  (let ((source (current-buffer))
+        (file (make-temp-file "asciidoc-preview" nil ".html")))
+    (setq
+     asciidoc--preview-proc
+     (asciidoc--convert-to-html
+      file
+      ;; shr ignores CSS, so leave the stylesheet out.
+      '("-a" "stylesheet!" "-a" "nofooter")
+      (lambda (ok)
+        (unwind-protect
+            (when (and ok (buffer-live-p source))
+              (let ((buf (with-current-buffer source
+                           (or (asciidoc--preview-live-buffer)
+                               (setq asciidoc--preview-buffer
+                                     (generate-new-buffer
+                                      (format "*asciidoc-preview: %s*"
+                                              (buffer-name))))))))
+                (with-current-buffer buf
+                  (unless (derived-mode-p 'asciidoc-preview-mode)
+                    (asciidoc-preview-mode))
+                  (setq asciidoc--preview-source source)
+                  ;; shr fills to the selected window, so render in the
+                  ;; window that shows the preview when there is one.
+                  (let ((win (if show
+                                 (display-buffer buf)
+                               (get-buffer-window buf t))))
+                    (if win
+                        (with-selected-window win
+                          (asciidoc--preview-render file source))
+                      (asciidoc--preview-render file source))))))
+          (delete-file file)))))))
+
+(defun asciidoc--preview-live-buffer ()
+  "Return the current buffer's preview buffer if it is still alive."
+  (and (buffer-live-p asciidoc--preview-buffer) asciidoc--preview-buffer))
+
+(defun asciidoc--preview-after-save ()
+  "Refresh the preview of the buffer that was just saved."
+  (when (and asciidoc-preview-refresh-on-save (asciidoc--preview-live-buffer))
+    (asciidoc--preview-update)))
+
+(defun asciidoc--preview-revert (&rest _)
+  "Render the preview buffer's source again."
+  (unless (buffer-live-p asciidoc--preview-source)
+    (user-error "The buffer this preview was made from is gone"))
+  (with-current-buffer asciidoc--preview-source
+    (asciidoc--preview-update)))
+
+(define-derived-mode asciidoc-preview-mode special-mode "AsciiDoc-Preview"
+  "Major mode of the buffers that `asciidoc-preview' renders into.
+\\<asciidoc-preview-mode-map>\\[revert-buffer] renders the source again."
+  (setq-local revert-buffer-function #'asciidoc--preview-revert))
+
+(defun asciidoc-preview ()
+  "Show the current buffer as Asciidoctor renders it, in another window.
+The HTML is displayed with `shr', which shows headings, lists, tables,
+images and links but knows nothing about CSS; use
+`asciidoc-preview-in-browser' for the fully styled page.  The buffer does
+not have to be saved first.  The preview is rendered again whenever the
+buffer is saved (see `asciidoc-preview-refresh-on-save') and on
+\\<asciidoc-preview-mode-map>\\[revert-buffer] in the preview buffer."
+  (interactive)
+  (add-hook 'after-save-hook #'asciidoc--preview-after-save nil t)
+  (asciidoc--preview-update t))
+
+(defvar asciidoc--preview-browser-files nil
+  "The HTML files made for browser previews that are still around.")
+
+(defun asciidoc--preview-delete-browser-file ()
+  "Delete the HTML file made for the browser preview of this buffer."
+  (when asciidoc--preview-browser-file
+    (ignore-errors (delete-file asciidoc--preview-browser-file))
+    (setq asciidoc--preview-browser-files
+          (delete asciidoc--preview-browser-file
+                  asciidoc--preview-browser-files))))
+
+(defun asciidoc--preview-delete-browser-files ()
+  "Delete every HTML file made for a browser preview."
+  (dolist (file asciidoc--preview-browser-files)
+    (ignore-errors (delete-file file))))
+
+(defun asciidoc-preview-in-browser ()
+  "Open the current buffer, converted to HTML by Asciidoctor, in a browser.
+The page is a temporary file with local images embedded in it; it goes
+away when the buffer is killed.  The buffer does not have to be saved
+first."
+  (interactive)
+  (asciidoc--preview-check)
+  (require 'browse-url)
+  (let ((file (or asciidoc--preview-browser-file
+                  (setq asciidoc--preview-browser-file
+                        (make-temp-file "asciidoc-preview" nil ".html")))))
+    (cl-pushnew file asciidoc--preview-browser-files :test #'equal)
+    (add-hook 'kill-buffer-hook #'asciidoc--preview-delete-browser-file nil t)
+    ;; `kill-buffer-hook' does not run when Emacs exits.
+    (add-hook 'kill-emacs-hook #'asciidoc--preview-delete-browser-files)
+    ;; The page lives outside the document's directory, so relative image
+    ;; paths would not resolve; embed the images instead.
+    (asciidoc--convert-to-html
+     file '("-a" "data-uri")
+     (lambda (ok)
+       (when ok
+         (browse-url (browse-url-file-url file)))))))
+
+;; The preview's state has to outlive a `revert-buffer' of the source,
+;; which runs the major mode again.
+(put 'asciidoc--preview-proc 'permanent-local t)
+(put 'asciidoc--preview-buffer 'permanent-local t)
+(put 'asciidoc--preview-browser-file 'permanent-local t)
+(put 'asciidoc--preview-after-save 'permanent-local-hook t)
+(put 'asciidoc--preview-delete-browser-file 'permanent-local-hook t)
+
+;;; Inline images
+
+(defcustom asciidoc-max-image-size nil
+  "Largest size at which an image is displayed inline.
+Either nil, which fits images to the window, or a cons (WIDTH . HEIGHT)
+in pixels.  Larger images are scaled down."
+  :type '(choice (const :tag "Fit the window" nil)
+                 (cons (natnum :tag "Width") (natnum :tag "Height")))
+  :group 'asciidoc
+  :package-version '(asciidoc-mode . "0.5.0"))
+
+(defun asciidoc--image-macros ()
+  "Return the image macros in the buffer as a list of (BEG END TARGET).
+Both block (`image::') and inline (`image:') macros are included."
+  (when (treesit-parser-list nil 'asciidoc)
+    ;; The inline parser only knows its ranges once they are computed.
+    (treesit-update-ranges)
+    (let (macros beg end name)
+      (dolist (capture
+               (append
+                (treesit-query-capture
+                 (treesit-buffer-root-node 'asciidoc)
+                 '((block_macro (block_macro_name) @name (target) @target)
+                   @macro))
+                (treesit-query-capture
+                 (treesit-parser-root-node
+                  (car (treesit-parser-list nil 'asciidoc-inline)))
+                 '((inline_macro (macro_name) @name (target) @target)
+                   @macro))))
+        (let ((node (cdr capture)))
+          (pcase (car capture)
+            ('macro (setq beg (treesit-node-start node)
+                          end (treesit-node-end node)
+                          name nil))
+            ('name (setq name (treesit-node-text node t)))
+            ('target
+             (when (equal name "image")
+               ;; A block macro node takes in the newline that ends it.
+               (when (eq (char-before end) ?\n)
+                 (setq end (1- end)))
+               (push (list beg end (treesit-node-text node t)) macros))))))
+      (nreverse macros))))
+
+(defun asciidoc--image-file (target)
+  "Return the local file image TARGET refers to, or nil.
+A relative TARGET is looked up in the document's `imagesdir', in the
+module's `images' directory for an Antora page, and next to the document
+otherwise.  URLs and files that do not exist yield nil."
+  (unless (or (file-remote-p default-directory)
+              (string-match-p "\\`[a-z][a-z0-9+.-]*:\\(?://\\|[^/\\\\]\\)"
+                              target))
+    (let* ((imagesdir (asciidoc--doc-attribute "imagesdir" ""))
+           (antora (asciidoc--antora-context))
+           (dir (cond ((not (string-empty-p imagesdir))
+                       (expand-file-name imagesdir))
+                      (antora
+                       (expand-file-name
+                        (concat "modules/" (plist-get antora :module)
+                                "/images")
+                        (plist-get antora :root)))
+                      (t default-directory)))
+           (file (expand-file-name target dir)))
+      (and (file-regular-p file) (file-readable-p file) file))))
+
+(defun asciidoc--image-overlay-modified (overlay after &rest _)
+  "Delete OVERLAY when the image macro it covers is about to be edited.
+AFTER is non-nil when called after the change, which is too late to
+matter."
+  (unless after
+    (delete-overlay overlay)))
+
+(defun asciidoc-remove-inline-images ()
+  "Stop displaying images inline, showing the image macros again."
+  (interactive)
+  (save-restriction
+    (widen)
+    (remove-overlays nil nil 'asciidoc-inline-image t)))
+
+(defun asciidoc-display-inline-images ()
+  "Display the images that the buffer's image macros point to.
+Each `image::' or `image:' macro whose target is a local file is shown
+as that image; editing a macro brings its text back.  Images on the web
+are left alone.  See `asciidoc-max-image-size' for scaling."
+  (interactive)
+  (unless (display-images-p)
+    (user-error "This display cannot show images"))
+  (unless (treesit-parser-list nil 'asciidoc)
+    (user-error "Displaying images needs the AsciiDoc grammars"))
+  (save-restriction
+    (widen)
+    (asciidoc-remove-inline-images)
+    (let* ((win (get-buffer-window nil t))
+           (max-width (or (car asciidoc-max-image-size)
+                          (and win (window-body-width win t))))
+           (max-height (or (cdr asciidoc-max-image-size)
+                           (and win (window-body-height win t))))
+           (count 0))
+      (pcase-dolist (`(,beg ,end ,target) (asciidoc--image-macros))
+        (when-let* ((file (asciidoc--image-file target))
+                    (image (ignore-errors
+                             (create-image file nil nil
+                                           :max-width max-width
+                                           :max-height max-height))))
+          ;; Pick up a file that changed since it was last displayed.  The
+          ;; function is missing from an Emacs built without image support.
+          (when (fboundp 'image-flush)
+            (image-flush image))
+          (setq count (1+ count))
+          (let ((ov (make-overlay beg end nil t)))
+            (overlay-put ov 'asciidoc-inline-image t)
+            (overlay-put ov 'display image)
+            (overlay-put ov 'evaporate t)
+            (overlay-put ov 'help-echo file)
+            (overlay-put ov 'modification-hooks
+                         '(asciidoc--image-overlay-modified)))))
+      (message (if (zerop count)
+                   "No local images to display"
+                 "Displaying %d image%s")
+               count (if (= count 1) "" "s")))))
+
+(defun asciidoc-toggle-inline-images ()
+  "Turn the inline display of images on or off."
+  (interactive)
+  (if (seq-some (lambda (ov) (overlay-get ov 'asciidoc-inline-image))
+                (save-restriction
+                  (widen)
+                  (overlays-in (point-min) (point-max))))
+      (asciidoc-remove-inline-images)
+    (asciidoc-display-inline-images)))
 
 ;;; Mode definition
 
@@ -1618,6 +1968,9 @@ Install them with \\[asciidoc-install-grammars].
 (keymap-set asciidoc-mode-map "C-c C-b" #'outline-backward-same-level)
 (keymap-set asciidoc-mode-map "C-c C-u" #'outline-up-heading)
 (keymap-set asciidoc-mode-map "C-c C-o" #'asciidoc-follow-reference-at-point)
+(keymap-set asciidoc-mode-map "C-c C-c p" #'asciidoc-preview)
+(keymap-set asciidoc-mode-map "C-c C-c b" #'asciidoc-preview-in-browser)
+(keymap-set asciidoc-mode-map "C-c C-x C-i" #'asciidoc-toggle-inline-images)
 ;; `narrow-to-defun' would narrow to the heading line alone.
 (keymap-set asciidoc-mode-map "<remap> <narrow-to-defun>"
             #'asciidoc-narrow-to-section)
@@ -1653,6 +2006,12 @@ Install them with \\[asciidoc-install-grammars].
      ["Move Subtree Down" outline-move-subtree-down]
      "---"
      ["Mark Subtree" outline-mark-subtree])
+    ("Preview"
+     ["Preview" asciidoc-preview]
+     ["Preview in Browser" asciidoc-preview-in-browser]
+     "---"
+     ["Toggle Inline Images" asciidoc-toggle-inline-images
+      :enable (display-images-p)])
     "---"
     ["Comment/Uncomment Region" comment-dwim]
     ["Narrow to Section" asciidoc-narrow-to-section]

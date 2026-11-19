@@ -15,6 +15,9 @@
 * https://github.com/bbatsov/asciidoc-mode/pull/23[#23]: Add `asciidoc-narrow-to-section`, which narrows to the section around point with its subsections. It takes over `C-x n d`, as `narrow-to-defun` narrowed to the heading line alone.
 * https://github.com/bbatsov/asciidoc-mode/pull/23[#23]: Report the current section in `which-function-mode` and `add-log-current-defun`.
 
+* https://github.com/bbatsov/asciidoc-mode/pull/24[#24]: Add `asciidoc-preview` (`C-c C-c p`), which shows the document as Asciidoctor renders it in another window and refreshes on save, and `asciidoc-preview-in-browser` (`C-c C-c b`) for the fully styled page.
+* https://github.com/bbatsov/asciidoc-mode/pull/24[#24]: Add `asciidoc-toggle-inline-images` (`C-c C-x C-i`), which displays local images in place of their `image::` and `image:` macros.
+
 === Bug Fixes
 
 * https://github.com/bbatsov/asciidoc-mode/pull/23[#23]: Strip the trailing newline from Imenu entries.
